@@ -1,4 +1,0 @@
-#!/usr/sbin/nft -f
-
-table inet fw {
-	}
