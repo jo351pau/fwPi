@@ -1,3 +1,0 @@
-elements = {
-    31.13.84.36 #facebook.com
-}
