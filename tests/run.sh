@@ -1,0 +1,56 @@
+#!/usr/bin/env bash
+#
+# run.sh
+
+set -u
+
+source "./config.sh"
+source "./lib.sh"
+source "./import_lists.sh"
+
+source "./dns_interception.sh"
+source "./dns_bypass.sh"
+source "./ip_block.sh"
+source "./dot_block.sh"
+source "./quic_block.sh"
+source "./latency.sh"
+
+import_lists
+
+echo "test_type,stack,target,trial,rules_state,result_ms,success" > "$OUTFILE"
+
+# log "=== Baseline (rules OFF) ==="
+# read -p "Disable firewall rules, then press Enter..."
+#
+# run_dns_interception "rules_off"
+# log "run_dns_interception -> done"
+# run_dns_bypass "rules_off"
+# log "run_dns_bypass -> done"
+# run_ip_block "rules_off"
+# log "run_ip_block -> done"
+# run_dot_block "rules_off"
+# log "run_dot_block -> done"
+# run_quic_block "rules_off"
+# log "run_quic_block -> done"
+# run_latency "rules_off"
+# log "run_latency -> done"
+
+log "=== Treatment (rules ON) ==="
+read -p "Enable firewall rules, then press Enter..."
+
+run_dns_interception "rules_on"
+log "run_dns_interception -> done"
+run_dns_bypass "rules_on"
+log "run_dns_bypass -> done"
+run_ip_block "rules_on"
+log "run_ip_block -> done"
+run_dot_block "rules_on"
+log "run_dot_block -> done"
+run_quic_block "rules_on"
+log "run_quic_block -> done"
+run_latency "rules_on"
+log "run_latency -> done"
+
+aggregate_results
+
+log "Done. Results written to $OUTFILE"
