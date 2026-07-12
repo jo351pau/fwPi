@@ -1,7 +1,5 @@
 #!/usr/bin/env bash
 
-#!/usr/bin/env bash
-
 run_ip_block() {
     local state=$1
 
@@ -24,7 +22,7 @@ test_ip_block() {
 
     for ((i=1;i<=REPS;i++)); do
         start=$(now_ms)
-        out=$(run_ping "$pingcmd" "$ip")
+        out=$($RUN_PING "$pingcmd" "$ip")
 
         if echo "$out" | grep -qE 'bytes from|time[=<]'; then
             reachable=1

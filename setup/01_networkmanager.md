@@ -7,7 +7,7 @@ autoconnect yes \
 802-11-wireless.mode ap \
 802-11-wireless.band bg \
 ipv4.method manual ipv4.address 192.168.50.1/24 \
-ipv6.method manual ipv6.address fd79:2cbd:da3c::/64 \
+ipv6.method manual ipv6.address 2a06:d1c1:ee:1::1 \
 wifi-sec.key-mgmt wpa-psk \
 wifi-sec.psk "password"
 ```
@@ -39,7 +39,7 @@ method=manual
 
 [ipv6]
 addr-gen-mode=default
-address1=fd79:2cbd:da3c::/64
+address1=2a06:d1c1:ee:1::1/64
 method=manual
 
 [proxy]

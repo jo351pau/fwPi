@@ -59,3 +59,11 @@ ip_block,v6,2a05:d018:76c:b684:b233:ac1f:be1f:7,1,rules_on,53,1
 ip_block,v6,2a05:d018:76c:b685:c898:aa3a:42c7:9d21,1,rules_on,56,1
 dot_block,v4,1.1.1.1,1,rules_on,75141,1
 dot_block,v4,8.8.8.8,1,rules_on,75132,1
+dot_block,v4,9.9.9.9,1,rules_on,75101,1
+dot_block,v6,2606:4700:4700::1111,1,rules_on,55,1
+dot_block,v6,2001:4860:4860::8888,1,rules_on,44,1
+dot_block,v6,2620:fe::fe,1,rules_on,47,1
+quic_block,v4,https://cloudflare.com,1,rules_on,425,1
+quic_block,v4,https://google.com,1,rules_on,1098,1
+latency,v4,1.1.1.1,1,rules_on,8.082,1
+latency,v6,2606:4700:4700::1111,1,rules_on,29.888,1

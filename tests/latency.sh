@@ -8,8 +8,7 @@ test_latency() {
 
     for ((i=1; i<=REPS; i++)); do
 
-        # out=$(timeout 1 run_ping "$stack" "$target")
-        out=$(run_ping "$stack" "$target")
+        out=$($RUN_PING "$stack" "$target")
         ms=$(extract_time "$out")
 
         if [[ -z "$ms" ]]; then

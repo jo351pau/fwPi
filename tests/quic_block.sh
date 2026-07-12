@@ -1,10 +1,4 @@
 #!/usr/bin/env bash
-#
-# CURL="$(command -v curl)"
-#
-# If this does not work: $ brew install curl
-# /opt/homebrew/opt/curl/bin/curl --http3 https://cloudflare.com
-CURL="/opt/homebrew/opt/curl/bin/curl" # if standard curl --http3 does not work
 
 test_quic() {
 
