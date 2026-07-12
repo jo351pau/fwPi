@@ -1,0 +1,11 @@
+elements = {
+  2a03:2880:f107:83:face:b00c:0:25de, # facebook.com
+  2a03:2880:f207:e5:face:b00c:0:4420, # instagram.com
+  2a00:1450:4001:c15::be, # youtube.com
+  2a00:1450:4001:c15::5d,
+  2a00:1450:4001:c15::5b,
+  2a00:1450:4001:c15::88,
+  2a05:d018:76c:b684:b233:ac1f:be1f:7, # netflix.com
+  2a05:d018:76c:b685:c898:aa3a:42c7:9d21
+}
+
