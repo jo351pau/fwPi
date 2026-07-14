@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# tests Piholes Blocklist
 
 test_dns() {
     local domain=$1
@@ -11,7 +12,7 @@ test_dns() {
         start=$(now_ms)
         result=$(dig +short +time=2 +tries=1 "$rtype" "$domain" | tr -d '\r')
         end=$(now_ms)
-        ms=$((end-start))
+        m s=$((end-start))
         blocked=0
 
         case "$rtype" in

@@ -19,7 +19,7 @@ run_ping_mac() {
     local target=$2
 
     if [[ "$family" == "v6" ]]; then
-        $V6_PING_CMD -c 1 "$target" 2>/dev/null # On Linux add -W 1: does not exist for ping6 :(
+        ping6 -c 1 "$target" 2>/dev/null # On Linux add -W 1: does not exist for ping6 :(
     else
         ping -c 1 -W 1000 "$target" 2>/dev/null # On linux -W 1
     fi
@@ -30,7 +30,7 @@ run_ping_linux() {
     local target=$2
 
     if [[ "$family" == "v6" ]]; then
-        $V6_PING_CMD -c 1 -W 1 "$target" 2>/dev/null
+        "$V6_PING_CMD" -c 1 -W 1 "$target" 2>/dev/null
     else
         ping -c 1 -W 1 "$target" 2>/dev/null
     fi

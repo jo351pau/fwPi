@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+# does not work because of DNS blocking via IP in nftables
 test_latency() {
 
     local target=$1

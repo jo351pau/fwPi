@@ -23,7 +23,7 @@ JUMP_COMMENT="censorship-jump"      # used to find and delete the jump rule
 is_enabled() {
     # check if the jump rule exists in forward chain
     nft list chain $TABLE $CHAIN_FWD 2>/dev/null \
-        | grep -q "$JUMP_COMMENT"
+        | grep -Fqm1 $JUMP_COMMENT
 }
 
 insert_jump() {
@@ -38,8 +38,9 @@ remove_jump() {
     # find the handle of the jump rule and delete it
     local handle
     handle=$(nft -a list chain $TABLE $CHAIN_FWD \
-        | grep "$JUMP_COMMENT" \
-        | grep -oP 'handle \K[0-9]+')
+        | grep -m1 "$JUMP_COMMENT" \
+        | grep -o 'handle [0-9]\+' \
+        | cut -d' ' -f2)
 
     if [[ -n "$handle" ]]; then
         nft delete rule $TABLE $CHAIN_FWD handle "$handle"
@@ -59,8 +60,6 @@ cmd_enable() {
         echo "Censorship mode already active"
         exit 0
     fi
-
-    # echo "Loading censorship rules..."
 
     echo "Inserting forward chain jump..."
     insert_jump
@@ -120,7 +119,7 @@ cmd_reload() {
     nft flush set $TABLE deny_ipv6_dns
 
     # reload base config which includes set definitions with files
-    nft -f "$BASE_NFT"
+    nft -f "$NFT"
 
     # reload censorship rules
     # load_censorship_rules

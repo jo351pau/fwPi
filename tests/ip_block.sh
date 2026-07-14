@@ -5,24 +5,23 @@ run_ip_block() {
 
     # -- IPv4 Block --
     for ip in "${BLOCKED_IP4[@]}"; do
-        test_ip_block "$ip" "v4" "ping" "$state"
+        test_ip_block "$ip" "v4" "$state"
     done
 
     # -- IPv6 Block --
     for ip in "${BLOCKED_IP6[@]}"; do
-            test_ip_block "$ip" "v6" "$V6_PING_CMD" "$state"
+            test_ip_block "$ip" "v6" "$state"
         done
 }
 
 test_ip_block() {
     local ip=$1
     local stack=$2
-    local pingcmd=$3
-    local state=$4
+    local state=$3
 
     for ((i=1;i<=REPS;i++)); do
         start=$(now_ms)
-        out=$($RUN_PING "$pingcmd" "$ip")
+        out=$($RUN_PING "$stack" "$ip")
 
         if echo "$out" | grep -qE 'bytes from|time[=<]'; then
             reachable=1

@@ -1,8 +1,8 @@
 # Testing
 
 ``bash
-$ chmod +x run_tests.sh
-$ ./run_tests.sh
+$ chmod +x run.sh
+$ ./run.sh
 ``
 This has been set up for MacOS (sorry). But can be used for Linux aswell with few alterations in ```/testing/config.s``h:
 - Adjust the basedirectory BASE_DIR
