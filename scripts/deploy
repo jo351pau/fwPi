@@ -1,0 +1,12 @@
+#!/usr/bin/env bash
+
+# copy fwPi to lib
+sudo cp -dr ./fwPi /usr/local/lib
+
+# copy nftables.conf
+sudo cp /usr/local/lib/fwPi/config/nftables/nftables.conf /etc/nftables.conf
+
+# create symlink for fw-censor
+sudo ln -s /usr/local/lib/fwPi/fwPiCli/fw-censor /usr/local/bin/fw-censor
+# make executable
+sudo chmod +x /usr/local/bin/fw-censor

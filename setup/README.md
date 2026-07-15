@@ -9,3 +9,10 @@
 - Dpi/SNI (not happening right now)
 
 Download rasp Imager and prepare micro SD with Raspian Trixie
+
+git init
+git clone -b Working https://github.com/jo351pau/fwPi.git
+chmod +x ./fwPi/deploy
+./fwPi/deploy
+
+git pull

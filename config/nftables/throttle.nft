@@ -1,4 +1,4 @@
-# /etc/nftables/throttle.nft
+# /usr/local/lib/fwPi/config/nftables/throttle.nft
 
 # Packet marking for tc throttling
 # nftables marks packets, tc enforces rate limits based on marks

@@ -10,13 +10,13 @@ ALLOWED_DOMAINS=()
 BLOCKED_IP4=()
 BLOCKED_IP6=()
 
-BASE_DIR="/Users/johannapauler/Desktop/fwPi/config"
+BASE_DIR="/usr/local/lib/fwPi/config"
 
 BLOCKLIST="$BASE_DIR/my_blocklist.txt"
 ALLOWLIST="$BASE_DIR/my_allowlist.txt"
 
-DENY_IPV4="$BASE_DIR/deny_ipv4.txt"
-DENY_IPV6="$BASE_DIR/deny_ipv6.txt"
+DENY_IPV4="$BASE_DIR/nftables/nft_sets/deny_ipv4.txt"
+DENY_IPV6="$BASE_DIR/nftables/nft_sets/deny_ipv6.txt"
 
 V6_PING_CMD="ping6" # On Linux usually "ping -6"
 

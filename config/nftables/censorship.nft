@@ -1,5 +1,5 @@
 #!/usr/sbin/nft -f
-# /etc/nftables/censorship.nft
+# /usr/local/lib/fwPi/config/nftables/censorship.nft
 # Censorship filtering rules
 # Do not load directly — use fw-censor CLI
 # Applied by inserting rules into the censorship chain

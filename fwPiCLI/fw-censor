@@ -14,10 +14,10 @@
 
 set -euo pipefail
 
-SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+LIB_DIR="/usr/local/lib/fwPiCLI"
 
-source "$SCRIPT_DIR/config.sh"
-source "$SCRIPT_DIR/lib.sh"
+source "$LIB_DIR/config.sh"
+source "$LIB_DIR/lib.sh"
 
 
 # -----------------------------------------------------------

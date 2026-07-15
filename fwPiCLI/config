@@ -8,8 +8,8 @@
 # shellcheck disable=SC2034
 # darf man so?
 BASE_NFT="/etc/nftables.conf"
-CENSORSHIP_NFT="/etc/nftables/censorship.nft"
-THROTTLE_NFT="/etc/nftables/throttle.nft"
+CENSORSHIP_NFT="/usr/local/lib/fwPi/config/nftables/censorship.nft"
+THROTTLE_NFT="/usr/local/lib/fwPi/config/nftables/throttle.nft"
 
 TABLE="inet filter"
 MANGLE_TABLE="inet mangle"

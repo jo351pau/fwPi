@@ -4,8 +4,6 @@
 
 ``$ systemctl start nftables``
 
-Edit ``/etc/nftables.conf`` and add the deny-lists in subfolder ``/etc/nftables/``
-
 Validate syntax without applying: ``$ nft -c -f /etc/nftables.conf``
 
 Apply: ``$ sudo nft -f /etc/nftables.conf``

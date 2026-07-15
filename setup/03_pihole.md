@@ -14,4 +14,8 @@ Router (Gateway): ``192.168.50.1``
 
 Enable IPv6 support
 
-Create ``file:///etc/pihole/my_blocklist.txt`` and add to subscribed lists group management.
+Add my_blocklist and my_allowlist to subscribed lists group management.
+``file://usr/local/lib/fwPi/config/my_blocklist.txt`` 
+`file://usr/local/lib/fwPi/config/my_blocklist.txt``
+
+pihole -g
