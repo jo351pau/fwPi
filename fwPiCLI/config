@@ -1,0 +1,28 @@
+#!/bin/bash
+
+# /usr/local/bin/fwPiCLI/config
+
+# -----------------------------------------------------------
+# configuration
+# -----------------------------------------------------------
+# shellcheck disable=SC2034
+# darf man so?
+BASE_NFT="/etc/nftables.conf"
+CENSORSHIP_NFT="/etc/nftables/censorship.nft"
+THROTTLE_NFT="/etc/nftables/throttle.nft"
+
+TABLE="inet filter"
+MANGLE_TABLE="inet mangle"
+CHAIN_FWD="forward"
+CHAIN_CEN="censorship"
+JUMP_COMMENT="censorship-jump"
+MANGLE_COMMENT="throttle-mangle"
+
+IFACE="wlan0"
+STATUS_FILE="/run/fw-censor.mode"
+
+# default throttle rates — override via argument
+THROTTLE_RATE="${2:-128kbit}"
+THROTTLE_CEIL="256kbit"
+THROTTLE_LATENCY="500ms"
+TOTAL_RATE="100mbit"

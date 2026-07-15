@@ -1,0 +1,47 @@
+# /etc/nftables/throttle.nft
+
+# Packet marking for tc throttling
+# nftables marks packets, tc enforces rate limits based on marks
+#
+# Mark values:
+#   0x1 = throttle — assigned to traffic matching throttle targets
+#         tc will rate-limit these to the configured bandwidth
+
+table inet mangle {
+    chain forward {
+        type filter hook forward priority -150;
+        # priority -150 — runs before filter forward (priority 0)
+        # ensures marking happens before any filter decisions
+
+        # mark traffic to/from blocked IP sets
+        # same sets as censorship mode — but mark instead of drop
+        ip  daddr @deny_ipv4     meta mark set 0x1 \
+            comment "mark throttle — deny_ipv4 outbound"
+        ip  saddr @deny_ipv4     meta mark set 0x1 \
+            comment "mark throttle — deny_ipv4 inbound"
+        ip6 daddr @deny_ipv6     meta mark set 0x1 \
+            comment "mark throttle — deny_ipv6 outbound"
+        ip6 saddr @deny_ipv6     meta mark set 0x1 \
+            comment "mark throttle — deny_ipv6 inbound"
+
+        ip  daddr @deny_ipv4_dns meta mark set 0x1 \
+            comment "mark throttle — dns_ipv4 outbound"
+        ip  saddr @deny_ipv4_dns meta mark set 0x1 \
+            comment "mark throttle — dns_ipv4 inbound"
+        ip6 daddr @deny_ipv6_dns meta mark set 0x1 \
+            comment "mark throttle — dns_ipv6 outbound"
+        ip6 saddr @deny_ipv6_dns meta mark set 0x1 \
+            comment "mark throttle — dns_ipv6 inbound"
+
+        # mark DoT traffic
+        tcp dport 853 meta mark set 0x1 \
+            comment "mark throttle — DoT TCP"
+        udp dport 853 meta mark set 0x1 \
+            comment "mark throttle — DoT UDP"
+
+        # note: QUIC (UDP/443) is dropped in censorship mode
+        # in throttle mode we mark it instead
+        udp dport 443 meta mark set 0x1 \
+            comment "mark throttle — QUIC UDP/443"
+    }
+}

@@ -1,0 +1,29 @@
+#!/usr/sbin/nft -f
+# /etc/nftables/censorship.nft
+# Censorship filtering rules
+# Do not load directly — use fw-censor CLI
+# Applied by inserting rules into the censorship chain
+# and redirecting forward chain traffic through it
+
+table inet filter {
+    chain censorship {
+        # IP blocklists
+        ip  daddr @deny_ipv4 counter log prefix "DROP deny_ipv4 out: " drop
+        ip  saddr @deny_ipv4 counter log prefix "DROP deny_ipv4 in: " drop
+        ip6 daddr @deny_ipv6 counter log prefix "DROP deny_ipv6 out: " drop
+        ip6 saddr @deny_ipv6 counter log prefix "DROP deny_ipv6 in: " drop
+
+        # DNS resolver IP blocklist: Catches DoH and DoT (already covered elsewhere)
+        ip  daddr @deny_ipv4_dns counter log prefix "DROP dns_ipv4 out: " drop
+        ip  saddr @deny_ipv4_dns counter log prefix "DROP dns_ipv4 in: " drop
+        ip6 daddr @deny_ipv6_dns counter log prefix "DROP dns_ipv6 out: " drop
+        ip6 saddr @deny_ipv6_dns counter log prefix "DROP dns_ipv6 in: " drop
+
+        # DoT
+        tcp dport 853 counter log prefix "DROP DoT TCP: " drop
+        udp dport 853 counter log prefix "DROP DoT UDP: " drop
+
+        # QUIC suppression
+        udp dport 443 counter log prefix "DROP QUIC: " drop
+    }
+}

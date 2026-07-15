@@ -1,0 +1,168 @@
+#!/bin/bash
+
+# /usr/local/bin/fwPiCLI/fw-censor
+# Censorship testbed CLI
+# Modes: enable (block) | throttle (shape) | disable (passthrough)
+#
+# Usage:
+#   fw-censor enable            — full IP/protocol blocking
+#   fw-censor throttle          — rate-limit censored traffic
+#   fw-censor throttle 64kbit   — throttle at custom rate
+#   fw-censor disable           — passthrough, no filtering
+#   fw-censor status            — current mode + counters
+#   fw-censor reload            — reload blocklists from disk
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+
+source "$SCRIPT_DIR/config.sh"
+source "$SCRIPT_DIR/lib.sh"
+
+
+# -----------------------------------------------------------
+# commands
+# -----------------------------------------------------------
+cmd_enable() {
+    local prev
+    prev=$(current_mode)
+
+    if [[ "$prev" == "enabled" ]]; then
+        echo "Already in censorship mode"
+        exit 0
+    fi
+
+    echo "Switching to censorship mode..."
+    teardown_all
+
+    load_censorship
+    insert_censor_jump
+    set_mode "enabled"
+
+    echo "Censorship mode active — traffic to blocked targets dropped"
+    cmd_status
+}
+
+cmd_throttle() {
+    local rate="${2:-$THROTTLE_RATE}"
+    local prev
+    prev=$(current_mode)
+
+    if [[ "$prev" == "throttle" ]]; then
+        echo "Already in throttle mode (rate: $rate)"
+        exit 0
+    fi
+
+    echo "Switching to throttle mode (rate: $rate)..."
+    teardown_all
+
+    load_mangle
+    tc_setup "$rate"
+    set_mode "throttle"
+
+    echo "Throttle mode active"
+    echo "  marked traffic rate: $rate + ${THROTTLE_LATENCY} latency"
+    echo "  normal traffic:      full speed"
+    cmd_status
+}
+
+cmd_disable() {
+    local prev
+    prev=$(current_mode)
+
+    if [[ "$prev" == "disabled" ]]; then
+        echo "Already in passthrough mode"
+        exit 0
+    fi
+
+    echo "Disabling all filtering..."
+    teardown_all
+    set_mode "disabled"
+
+    echo "Passthrough mode — no censorship, no throttling"
+    cmd_status
+}
+
+cmd_status() {
+    local mode
+    mode=$(current_mode)
+
+    echo ""
+    echo "==============================="
+    echo " fw-censor status"
+    echo "==============================="
+    echo " Mode: $mode"
+    echo ""
+
+    echo "--- nftables forward chain ---"
+    nft list chain $TABLE $CHAIN_FWD 2>/dev/null || echo "(not loaded)"
+
+    echo ""
+    echo "--- censorship chain counters ---"
+    nft list chain $TABLE $CHAIN_CEN 2>/dev/null || echo "(not active)"
+
+    if [[ "$mode" == "throttle" ]]; then
+        echo ""
+        echo "--- mangle chain ---"
+        nft list chain $MANGLE_TABLE forward 2>/dev/null || echo "(not active)"
+
+       echo ""
+        echo "--- tc classes (bytes/packets) ---"
+        tc -s class show dev $IFACE 2>/dev/null || echo "(not active)"
+    fi
+}
+
+cmd_reload() {
+    local mode
+    mode=$(current_mode)
+
+    case "$mode" in
+        enabled)
+            echo "Reloading censorship blocklists..."
+            nft -f "$BASE_NFT"
+            load_censorship
+            insert_censor_jump
+            echo "Reload complete"
+            ;;
+        throttle)
+            echo "Reloading throttle blocklists..."
+            nft -f "$BASE_NFT"
+            load_mangle
+            echo "Reload complete"
+            ;;
+        *)
+            echo "Nothing to reload — not in active filtering mode"
+            exit 1
+            ;;
+    esac
+}
+
+# -----------------------------------------------------------
+# entrypoint
+# -----------------------------------------------------------
+case "${1:-}" in
+    enable)   cmd_enable            ;;
+    throttle) cmd_throttle "$@"     ;;
+    disable)  cmd_disable           ;;
+    status)   cmd_status            ;;
+    reload)   cmd_reload            ;;
+    *)
+        cat <<EOF
+Usage: fw-censor <command> [options]
+
+Commands:
+  enable              block traffic to censored targets (drop)
+  throttle [rate]     rate-limit censored targets (default: 128kbit)
+                      example: fw-censor throttle 64kbit
+  disable             passthrough — no filtering
+  status              show current mode and counters
+  reload              reload blocklists from disk
+
+Modes:
+  disabled  →  no filtering, full internet access
+  throttle  →  censored traffic slowed to [rate] + 500ms latency
+  enabled   →  censored traffic dropped entirely
+EOF
+        exit 1
+        ;;
+esac

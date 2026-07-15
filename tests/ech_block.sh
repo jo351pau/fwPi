@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# This should NOT work. The Testbed does not have DPI capabilities
+# ! TEstbed does not have DPI capabilities necessary for breaking ECH traffic !
 
 test_ech() {
     local url=$1
@@ -30,7 +30,7 @@ test_ech() {
             success=1
         fi
 
-        # Your firewall cannot block ECH specifically,
+        # Your firewall can N O T block ECH specifically,
         # so connectivity should remain possible.
         if [[ "$state" == "rules_on" && "$connected" == 1 ]]; then
             success=1

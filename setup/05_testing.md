@@ -14,12 +14,11 @@ ToDo
 - Dns bypass could be better
 - ip_block,v4,3.251.50.149,1,rules_off,2067,0
   ip_block,v4,54.155.178.5,1,rules_off,2072,0
-  ip_block,v4,54.74.73.31,1,rules_off,2066,0 why cant I ping Netflix from Eduroam
-- make nftables modular st blcoking can be added or not
-- do the math for latency
-- put everything from csv into nice tables
+  ip_block,v4,54.74.73.31,1,rules_off,2066,0 
+  also ipv6 for Netflix 
+  why cant I ping Netflix with rules off ? ?
 
-### Layer 1 — Pi-hole DNS filtering
+### Layer 1: Pi-hole DNS filtering
 dns_interception.sh    
 DNS forced to Pi-hole
 
@@ -38,19 +37,19 @@ dig facebook.com @192.168.8.1
 # Pi-hole is intercepting hardcoded DNS (NAT redirect test)
 # manually point dig at Google's resolver
 dig google.com @8.8.8.8
-# expected: resolves correctly — but check pihole -t
+# expected: resolves correctly - but check pihole -t
 # the query should appear in Pi-hole's log even though
-# you addressed it to 8.8.8.8 — proves NAT redirect works
+# you addressed it to 8.8.8.8 - proves NAT redirect works
 
 dig facebook.com @8.8.8.8
-# expected: 0.0.0.0 — Pi-hole intercepted it despite @8.8.8.8
+# expected: 0.0.0.0 - Pi-hole intercepted it despite @8.8.8.8
 
 # DoH bootstrap domains blocked
 dig dns.google @192.168.8.1
 dig cloudflare-dns.com @192.168.8.1
 # expected: both return 0.0.0.0
 ```
-### Layer 2 — nftables IP blocking
+### Layer 2: nftables IP blocking
 ip_block.sh            
 IPv4 and IPv6 firewall rules
 ------------
@@ -59,9 +58,9 @@ IPv4 and IPv6 firewall rules
 ping -c3 1.1.1.1
 ping -c3 8.8.8.8
 ping -c3 9.9.9.9
-# expected: all time out — check dmesg shows DROP dns_ipv4
+# expected: all time out -> check dmesg shows DROP dns_ipv4
 
-# IPv6 DNS resolvers blocked (if tunnel is up)
+# IPv6 DNS resolvers blocked
 ping6 -c3 2606:4700:4700::1111
 ping6 -c3 2001:4860:4860::8888
 # expected: dropped
@@ -71,7 +70,7 @@ ping -c3 142.250.185.46    # google.com
 ping -c3 93.184.216.34     # example.com
 # expected: replies
 
-# CURL by IP — no DNS involved
+# CURL by IP, no DNS involved
 # allowed:
 curl -v --connect-timeout 5 \
     --resolve google.com:443:142.250.185.46 \
@@ -83,32 +82,32 @@ curl -v --connect-timeout 5 \
     --resolve facebook.com:443:31.13.84.36 \
     https://facebook.com
 # expected: times out or refused
-# note: this tests IP blocking only — if 31.13.84.36 is not
-# in your deny_ipv4 set this will succeed — that is the
-# direct IP bypass gap, document it as a finding
+# note: this tests IP blocking only. If 31.13.84.36 is not
+# in your deny_ipv4 set this will succeed -> bypass
 ```
-### Layer 3 — Protocol blocking (DoT and QUIC)
+### Layer 3: Protocol blocking (DoT, QUIC and DoH, ECH)
+#### DoT tests
 dot_block.sh
-DNS-over-TLS tests TODO To slowwwwwww
-
-quic_block.sh
-QUIC tests
------------
 ```bash
 # install kdig for DoT testing
 brew install knot-resolver
 
 # DoT blocked (port 853)
 kdig -d @8.8.8.8 +tls google.com
-# expected: connection times out — dmesg shows DROP DoT
+# expected: connection times out - dmesg shows DROP DoT
 
 # confirm normal DNS still works (port 53 unaffected)
 dig google.com @192.168.8.1
 # expected: resolves normally
-
-# QUIC suppression — check browser falls back to HTTP/2
+```
+----
+#### QUIC Test
+quic_block.sh
+QUIC tests
+```bash
+# QUIC suppression -> check browser falls back to HTTP/2
 # install curl with HTTP/3 support
-brew install curl-openssl
+brew install curl
 
 # attempt HTTP/3 (QUIC)
 /usr/local/opt/curl/bin/curl -v --http3 https://google.com 2>&1 \
@@ -120,26 +119,49 @@ brew install curl-openssl
 curl -v https://google.com
 # expected: connects over TCP, HTTP/2
 ```
-### Layer 4 — End to end blocking behavior
+-----
+#### DoH Test
+doh_block.sh
 ```bash
-# full browser simulation — blocked domain
+curl --ipv4 -sS \
+            -H 'accept: application/dns-json' \
+            --max-time 5 \
+            "https://cloudflare-dns.com/dns-query?name=example.com&type=A" 
+            
+curl --ipv6 -sS \
+            -H 'accept: application/dns-json' \
+            --max-time 5 \
+            "https://cloudflare-dns.com/dns-query?name=example.com&type=A" 
+```
+-------
+#### ECH test
+ech_block.sh
+```bash
+curl -sS --ipv4 https://cloudflare-ech.com/
+curl -sS --ipv6 https://cloudflare-ech.com/
+# should be successful, even tho cloudflare-ech.com is blocked in Pihole
+```
+---------
+### Layer 4: End to end blocking behavior
+```bash
+# full browser simulation: blocked domain
 curl -v --max-time 10 https://facebook.com
 # expected: DNS returns 0.0.0.0, curl cannot connect
 # pihole -t shows: facebook.com blocked
 
-# full browser simulation — allowed domain
+# full browser simulation: allowed domain
 curl -v --max-time 10 https://google.com
 # expected: full TLS handshake, HTTP response
 
 # check what Pi-hole logs for a normal browsing session
-# open Safari, visit a few sites, watch pihole -t
+# open Browser, visit a few sites, watch pihole -t
 # you will see every DNS query the browser makes
 # including CDN subdomains, analytics, tracking pixels
 
 # test Pi-hole blocking a domain mid-session
 # visit a site, note what gets blocked in pihole -t
 # this shows collateral blocking (CDN, analytics on
-# the same domain) — document for thesis
+# the same domain)
 ```
 ### Layer 5 — Bypass attempt documentation (thesis data)
 ```bash
@@ -152,12 +174,12 @@ dig facebook.com
 networksetup -setdnsservers Wi-Fi 192.168.8.1
 
 # bypass attempt 2: DoH via Firefox
-# Firefox preferences → Network Settings → Enable DNS over HTTPS
+# Firefox preferences -> Network Settings -> Enable DNS over HTTPS
 # set provider to Cloudflare
 # visit facebook.com in Firefox
 # expected: blocked — cloudflare-dns.com in Pi-hole blocklist
 #           AND 1.1.1.1 in nftables IP blocklist
-# check pihole -t — does Firefox's DoH query appear?
+# check pihole -t: does Firefox's DoH query appear?
 # if not: DoH bypassed Pi-hole (expected)
 # if yes: NAT redirect caught it
 
@@ -166,20 +188,16 @@ curl -v --connect-timeout 5 \
     --resolve facebook.com:443:31.13.84.36 \
     https://facebook.com
 # expected: depends on whether 31.13.84.36 is in deny_ipv4
-# if NOT in list: connection succeeds — this is your documented gap
-# add to list:
-# sudo /usr/local/bin/add_to_blocklist.sh facebook.com
-# retest — should now be blocked
+# if NOT in list: connection succeeds
 
 # bypass attempt 4: different blocked domain via direct IP
 host instagram.com
 # take the returned IP and:
-curl -v --connect-timeout 5 \
-    --resolve instagram.com:443:<IP> \
+curl -v --resolve instagram.com:443:<IP> \
     https://instagram.com
 # document result
 
-# bypass attempt 5: IPv6 path (if tunnel up)
+# bypass attempt 5: IPv6 path
 # disable IPv4 temporarily on Mac:
 networksetup -setv4off Wi-Fi
 curl -v https://google.com
@@ -189,7 +207,30 @@ networksetup -setmanual Wi-Fi 192.168.8.100 255.255.255.0 192.168.8.1
 ```
 
 ### latency.sh             
-Ping/RTT baseline TODO the math
+Ping/RTT baseline
 
-### throughput.sh          
-iperf3 benchmark TODO!!!!
+### throttling 
+
+# from Mac client — install iperf3
+brew install iperf3
+
+# baseline — disable mode
+sudo fw-censor disable
+iperf3 -c <server_ip> -t 10
+# record throughput
+
+# throttle mode — default 128kbit
+sudo fw-censor throttle
+iperf3 -c <server_ip> -t 10
+# record throughput — should show ~128kbit
+
+# throttle mode — custom rate
+sudo fw-censor throttle 64kbit
+iperf3 -c <server_ip> -t 10
+
+# measure latency added by netem
+ping -c 20 <target_ip>
+# compare RTT between modes — should show +500ms in throttle mode
+
+# watch tc counters in real time during test
+watch -n1 'tc -s class show dev wlan0'

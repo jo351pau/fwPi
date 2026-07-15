@@ -34,7 +34,6 @@ test_doh() {
         fi
 
         success=0
-
         if [[ "$state" == "rules_off" && "$connected" == 1 ]]; then
             success=1
         fi
@@ -44,11 +43,10 @@ test_doh() {
         fi
 
         csv_write "doh_block,$stack,$url,$i,$state,$ms,$success"
-
     done
 }
 
-run_doh_block() {
+run_doh() {
 
     local state=$1
 
@@ -58,18 +56,8 @@ run_doh_block() {
         "https://dns.quad9.net/dns-query"
     )
 
-    # Same endpoints; IPv6 is selected automatically if available.
-    local ipv6_servers=(
-        "https://cloudflare-dns.com/dns-query"
-        "https://dns.google/resolve"
-        "https://dns.quad9.net/dns-query"
-    )
-
     for server in "${ipv4_servers[@]}"; do
         test_doh "$server" "v4" "$state"
-    done
-
-    for server in "${ipv6_servers[@]}"; do
         test_doh "$server" "v6" "$state"
     done
 }
