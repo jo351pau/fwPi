@@ -2,85 +2,51 @@
 
 # /usr/local/bin/fwPiCLI/fw-censor
 # Censorship testbed CLI
-# Modes: enable (block) | throttle (shape) | disable (passthrough)
+# Modes: td (traffic drop) | tc (traffic control) | base (passthrough)
 #
 # Usage:
-#   fw-censor enable            — full IP/protocol blocking
-#   fw-censor throttle          — rate-limit censored traffic
-#   fw-censor throttle 64kbit   — throttle at custom rate
-#   fw-censor disable           — passthrough, no filtering
+#   fw-censor td            — full IP/protocol blocking
+#   fw-censor tc          — rate-limit censored traffic
+#   fw-censor tc 64kbit   — throttle at custom rate
+#   fw-censor base           — passthrough, no filtering
 #   fw-censor status            — current mode + counters
 #   fw-censor reload            — reload blocklists from disk
 
 set -euo pipefail
 
-LIB_DIR="/usr/local/lib/fwPiCLI"
+LIB_DIR="/usr/local/lib/fwPi/fwPiCLI"
 
-source "$LIB_DIR/config.sh"
-source "$LIB_DIR/lib.sh"
+source "$LIB_DIR/config"
+source "$LIB_DIR/lib"
 
 
 # -----------------------------------------------------------
 # commands
 # -----------------------------------------------------------
-cmd_enable() {
-    local prev
-    prev=$(current_mode)
-
-    if [[ "$prev" == "enabled" ]]; then
-        echo "Already in censorship mode"
-        exit 0
-    fi
-
-    echo "Switching to censorship mode..."
-    teardown_all
-
-    load_censorship
-    insert_censor_jump
-    set_mode "enabled"
-
-    echo "Censorship mode active — traffic to blocked targets dropped"
-    cmd_status
+cmd_td() {
+  teardown_all
+  load_mode td
+  insert_jump td
+  set_mode td
+  echo "td mode active"
 }
 
-cmd_throttle() {
-    local rate="${2:-$THROTTLE_RATE}"
-    local prev
-    prev=$(current_mode)
+cmd_tc() {
+  local rate="${1:-$TC_RATE}"
 
-    if [[ "$prev" == "throttle" ]]; then
-        echo "Already in throttle mode (rate: $rate)"
-        exit 0
-    fi
-
-    echo "Switching to throttle mode (rate: $rate)..."
-    teardown_all
-
-    load_mangle
-    tc_setup "$rate"
-    set_mode "throttle"
-
-    echo "Throttle mode active"
-    echo "  marked traffic rate: $rate + ${THROTTLE_LATENCY} latency"
-    echo "  normal traffic:      full speed"
-    cmd_status
+  teardown_all
+  load_mode tc
+  insert_jump tc
+  tc_setup "$rate"
+  set_mode tc
+  echo "tc mode active"
 }
 
-cmd_disable() {
-    local prev
-    prev=$(current_mode)
-
-    if [[ "$prev" == "disabled" ]]; then
-        echo "Already in passthrough mode"
-        exit 0
-    fi
-
-    echo "Disabling all filtering..."
-    teardown_all
-    set_mode "disabled"
-
-    echo "Passthrough mode — no censorship, no throttling"
-    cmd_status
+cmd_base() {
+  teardown_all
+  nft -f "$NFT_BASE"
+  set_mode "base"
+  echo "Base fw active."
 }
 
 cmd_status() {
@@ -95,73 +61,73 @@ cmd_status() {
     echo ""
 
     echo "--- nftables forward chain ---"
-    nft list chain $TABLE $CHAIN_FWD 2>/dev/null || echo "(not loaded)"
+    nft list chain "$TABLE" "$CHAIN_FWD" 2>/dev/null || echo "(not loaded)"
 
     echo ""
-    echo "--- censorship chain counters ---"
-    nft list chain $TABLE $CHAIN_CEN 2>/dev/null || echo "(not active)"
+    echo "--- traffic_drop chain counters ---"
+    nft list chain "$TABLE" "$CHAIN_TD" 2>/dev/null || echo "(not active)"
 
-    if [[ "$mode" == "throttle" ]]; then
-        echo ""
-        echo "--- mangle chain ---"
-        nft list chain $MANGLE_TABLE forward 2>/dev/null || echo "(not active)"
+    if [[ "$mode" == "tc" ]]; then
+      echo ""
+      echo "--- traffic_control chain ---"
+      nft list chain $TABLE "$CHAIN_TC" 2>/dev/null || echo "(not active)"
 
-       echo ""
-        echo "--- tc classes (bytes/packets) ---"
-        tc -s class show dev $IFACE 2>/dev/null || echo "(not active)"
+      echo ""
+      echo "--- traffic_control classes (bytes/packets) ---"
+      tc -s class show dev "$IFACE" 2>/dev/null || echo "(not active)"
     fi
 }
 
+# reload always uses default rate for tc
 cmd_reload() {
     local mode
     mode=$(current_mode)
 
+    echo "Reloading $mode configuration..."
+
     case "$mode" in
-        enabled)
-            echo "Reloading censorship blocklists..."
-            nft -f "$BASE_NFT"
-            load_censorship
-            insert_censor_jump
-            echo "Reload complete"
-            ;;
-        throttle)
-            echo "Reloading throttle blocklists..."
-            nft -f "$BASE_NFT"
-            load_mangle
-            echo "Reload complete"
-            ;;
-        *)
-            echo "Nothing to reload — not in active filtering mode"
-            exit 1
-            ;;
+      td|tc)
+          teardown_all
+          nft -f "$NFT_BASE"
+          load_mode "$mode"
+          insert_jump "$mode"
+
+          [[ "$mode" == tc ]] && tc_setup
+          ;;
+      base)
+        nft -f "$NFT_BASE"
+        ;;
     esac
+
+    echo "Done reloading."
 }
 
 # -----------------------------------------------------------
 # entrypoint
 # -----------------------------------------------------------
 case "${1:-}" in
-    enable)   cmd_enable            ;;
-    throttle) cmd_throttle "$@"     ;;
-    disable)  cmd_disable           ;;
-    status)   cmd_status            ;;
-    reload)   cmd_reload            ;;
+    base)   cmd_base ;;
+    td)     cmd_td ;;
+    tc)     cmd_tc "${1:-$TC_RATE}" ;;
+    status) cmd_status ;;
+    reload) cmd_reload ;;
     *)
         cat <<EOF
 Usage: fw-censor <command> [options]
 
 Commands:
-  enable              block traffic to censored targets (drop)
-  throttle [rate]     rate-limit censored targets (default: 128kbit)
-                      example: fw-censor throttle 64kbit
-  disable             passthrough — no filtering
-  status              show current mode and counters
-  reload              reload blocklists from disk
+  base         Normal access point (base nftables)
+  td           Drop traffic matching the traffic_drop rules
+  tc [rate]    Rate-limit traffic matching the traffic_control rules
+               Default rate: 128kbit
+               Example: fw-censor tc 64kbit
+  status       Show current mode and counters
+  reload       Reload the current mode
 
 Modes:
-  disabled  →  no filtering, full internet access
-  throttle  →  censored traffic slowed to [rate] + 500ms latency
-  enabled   →  censored traffic dropped entirely
+  base    Base firewall only
+  td      traffic_drop (drop matching traffic)
+  tc      traffic_control (shape matching traffic)
 EOF
         exit 1
         ;;

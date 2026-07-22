@@ -3,104 +3,103 @@
 # /usr/local/bin/fwPiCLI/
 #
 # -----------------------------------------------------------
-# state helpers
+# maps a mode to variables
 # -----------------------------------------------------------
-current_mode() {
-    cat "$STATUS_FILE" 2>/dev/null || echo "unknown"
-}
-
-set_mode() {
-    echo "$1" > "$STATUS_FILE"
-}
-
-jump_exists() {
-    nft list chain $TABLE $CHAIN_FWD 2>/dev/null \
-        | grep -q $JUMP_COMMENT
-}
-
-mangle_exists() {
-    nft list table $MANGLE_TABLE 2>/dev/null | grep -q "$MANGLE_COMMENT"
-}
-
-tc_active() {
-    tc qdisc show dev $IFACE 2>/dev/null | grep -q "htb"
+mode_vars() {
+    case "$1" in
+        td)
+            NFT_FILE="$NFT_TD"
+            CHAIN="$CHAIN_TD"
+            JUMP_CHAIN="$CHAIN_TD"
+            COMMENT="$JUMP_COMMENT_TD"
+            ;;
+        tc)
+            NFT_FILE="$NFT_TC"
+            CHAIN="$CHAIN_TC"
+            JUMP_CHAIN="$CHAIN_TC"
+            COMMENT="$JUMP_COMMENT_TC"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
 }
 
 # -----------------------------------------------------------
 # nftables helpers
 # -----------------------------------------------------------
-insert_censor_jump() {
-    nft insert rule $TABLE $CHAIN_FWD \
-        jump $CHAIN_CEN \
-        comment \"$JUMP_COMMENT\"
+load_mode() {
+    mode_vars "$1"
+    nft -f "$NFT_FILE"
 }
 
-remove_censor_jump() {
+insert_jump() {
+    mode_vars "$1"
+
+    nft insert rule "$TABLE" "$CHAIN_FWD" \
+        jump "$JUMP_CHAIN" \
+        comment "$COMMENT"
+}
+
+flush_mode() {
+    mode_vars "$1"
+    nft flush chain "$TABLE" "$CHAIN"
+}
+
+remove_jump() {
+    mode_vars "$1"
+
     local handle
-    handle=$(nft -a list chain $TABLE $CHAIN_FWD \
-        | grep -m1 "$JUMP_COMMENT" \
-        | grep -o 'handle [0-9]\+' \
-        | cut -d' ' -f2)
-    if [[ -n "$handle" ]]; then
-            nft delete rule $TABLE $CHAIN_FWD handle "$handle"
-        fi
-}
+    handle=$(nft -a list chain "$TABLE" "$CHAIN_FWD" |
+        grep -m1 "$COMMENT" |
+        grep -o 'handle [0-9]\+' |
+        cut -d' ' -f2)
 
-load_censorship() {
-    nft -f "$CENSORSHIP_NFT"
-}
-
-flush_censorship() {
-    nft flush chain $TABLE $CHAIN_CEN
-}
-
-load_mangle() {
-    nft -f "$THROTTLE_NFT"
-}
-
-flush_mangle() {
-    nft delete table $MANGLE_TABLE 2>/dev/null || true
+    [[ -n "$handle" ]] &&
+        nft delete rule "$TABLE" "$CHAIN_FWD" handle "$handle"
 }
 
 # -----------------------------------------------------------
-# tc helpers
+# traffic_control helpers
 # -----------------------------------------------------------
 tc_setup() {
-    local rate="${1:-$THROTTLE_RATE}"
+    local rate="${1:-$TC_RATE}"
 
-    tc qdisc add dev $IFACE root handle 1: htb default 10
+    tc qdisc add dev "$IFACE" root handle 1: htb default 10
 
-    tc class add dev $IFACE parent 1: classid 1:1 \
-        htb rate $TOTAL_RATE
+    tc class add dev "$IFACE" parent 1: classid 1:1 \
+        htb rate "$TOTAL_RATE"
 
     # normal traffic — full rate
-    tc class add dev $IFACE parent 1:1 classid 1:10 \
-        htb rate $TOTAL_RATE ceil $TOTAL_RATE
+    tc class add dev "$IFACE" parent 1:1 classid 1:10 \
+        htb rate "$TOTAL_RATE" ceil "$TOTAL_RATE"
 
-    # throttled traffic — rate limited + latency
-    tc class add dev $IFACE parent 1:1 classid 1:20 \
-        htb rate "$rate" ceil $THROTTLE_CEIL
+    # tc traffic — rate limited + latency
+    tc class add dev "$IFACE" parent 1:1 classid 1:20 \
+        htb rate "$rate" ceil "$TC_CEIL"
 
-    tc qdisc add dev $IFACE parent 1:20 handle 20: \
-        netem delay $THROTTLE_LATENCY
+    tc qdisc add dev "$IFACE" parent 1:20 handle 20: \
+        netem delay "$TC_LATENCY"
 
-    # filter: mark 0x1 → throttled class
-    tc filter add dev $IFACE parent 1: protocol ip \
+    # filter: mark 0x1 -> tc class
+    tc filter add dev "$IFACE" parent 1: protocol ip \
         handle 1 fw flowid 1:20
-    tc filter add dev $IFACE parent 1: protocol ipv6 \
+    tc filter add dev "$IFACE" parent 1: protocol ipv6 \
         handle 1 fw flowid 1:20
 }
 
 tc_teardown() {
-    tc qdisc del dev $IFACE root 2>/dev/null || true
+    tc qdisc del dev "$IFACE" root 2>/dev/null || true
 }
 
 # -----------------------------------------------------------
 # teardown all filtering — shared cleanup
 # -----------------------------------------------------------
 teardown_all() {
-    remove_censor_jump  2>/dev/null || true
-    flush_censorship    2>/dev/null || true
-    flush_mangle        2>/dev/null || true
-    tc_teardown         2>/dev/null || true
+    for mode in td tc; do
+        remove_jump "$mode" 2>/dev/null || true
+        flush_mode "$mode" 2>/dev/null || true
+    done
+
+    tc_teardown 2>/dev/null || true
 }

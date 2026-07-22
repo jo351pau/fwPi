@@ -7,22 +7,22 @@
 # -----------------------------------------------------------
 # shellcheck disable=SC2034
 # darf man so?
-BASE_NFT="/etc/nftables.conf"
-CENSORSHIP_NFT="/usr/local/lib/fwPi/config/nftables/censorship.nft"
-THROTTLE_NFT="/usr/local/lib/fwPi/config/nftables/throttle.nft"
+NFT_BASE="/etc/nftables.conf"
+NFT_TD="/usr/local/lib/fwPi/config/nftables/traffic_drop.nft"
+NFT_TC="/usr/local/lib/fwPi/config/nftables/traffic_control.nft"
 
 TABLE="inet filter"
-MANGLE_TABLE="inet mangle"
 CHAIN_FWD="forward"
-CHAIN_CEN="censorship"
-JUMP_COMMENT="censorship-jump"
-MANGLE_COMMENT="throttle-mangle"
+CHAIN_TD="traffic_drop"
+CHAIN_TC="traffic_control"
+JUMP_COMMENT_TD="td-jump"
+JUMP_COMMENT_TC="tc-jump"
 
 IFACE="wlan0"
 STATUS_FILE="/run/fw-censor.mode"
 
 # default throttle rates — override via argument
-THROTTLE_RATE="${2:-128kbit}"
-THROTTLE_CEIL="256kbit"
-THROTTLE_LATENCY="500ms"
+TC_RATE="${2:-128kbit}"
+TC_CEIL="256kbit"
+TC_LATENCY="500ms"
 TOTAL_RATE="100mbit"

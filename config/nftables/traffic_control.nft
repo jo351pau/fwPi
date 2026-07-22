@@ -1,0 +1,34 @@
+# /usr/local/lib/fwPi/config/nftables/traffic_control.nft
+
+# Packet marking for tc throttling
+# nftables marks packets, tc enforces rate limits based on marks
+#
+# Mark values:
+#   0x1 = throttle : assigned to traffic matching throttle targets
+#         tc will rate-limit these to the configured bandwidth
+
+table inet filter {
+    chain traffic_control {
+        type filter hook forward priority -150;
+        # priority -150 - runs before filter forward (priority 0)
+        # ensures marking happens before any filter decisions
+
+        # mark traffic to/from blocked IP sets
+        ip  daddr @deny_ipv4 meta mark set 0x1 comment "mark tc - deny_ipv4 outbound"
+        ip  saddr @deny_ipv4 meta mark set 0x1 comment "mark tc - deny_ipv4 inbound"
+        ip6 daddr @deny_ipv6 meta mark set 0x1 comment "mark tc - deny_ipv6 outbound"
+        ip6 saddr @deny_ipv6 meta mark set 0x1 comment "mark tc - deny_ipv6 inbound"
+
+        ip  daddr @deny_ipv4_dns meta mark set 0x1 comment "mark tc - dns_ipv4 outbound"
+        ip  saddr @deny_ipv4_dns meta mark set 0x1 comment "mark tc - dns_ipv4 inbound"
+        ip6 daddr @deny_ipv6_dns meta mark set 0x1 comment "mark tc - dns_ipv6 outbound"
+        ip6 saddr @deny_ipv6_dns meta mark set 0x1 comment "mark tc - dns_ipv6 inbound"
+
+        # mark DoT traffic
+        tcp dport 853 meta mark set 0x1 comment "mark tc - DoT TCP"
+        udp dport 853 meta mark set 0x1 comment "mark tc - DoT UDP"
+
+        # mark QUIC (UDP/443)
+        udp dport 443 meta mark set 0x1 comment "mark tc - QUIC UDP/443"
+    }
+}
