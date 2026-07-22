@@ -28,6 +28,14 @@ mode_vars() {
 # -----------------------------------------------------------
 # nftables helpers
 # -----------------------------------------------------------
+current_mode() {
+    [[ -f "$STATUS_FILE" ]] && cat "$STATUS_FILE" || echo base
+}
+
+set_mode() {
+    echo "$1" > "$STATUS_FILE"
+}
+
 load_mode() {
     mode_vars "$1"
     nft -f "$NFT_FILE"

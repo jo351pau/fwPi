@@ -70,7 +70,7 @@ cmd_status() {
     if [[ "$mode" == "tc" ]]; then
       echo ""
       echo "--- traffic_control chain ---"
-      nft list chain $TABLE "$CHAIN_TC" 2>/dev/null || echo "(not active)"
+      nft list chain "$TABLE" "$CHAIN_TC" 2>/dev/null || echo "(not active)"
 
       echo ""
       echo "--- traffic_control classes (bytes/packets) ---"
