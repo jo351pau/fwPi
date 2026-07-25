@@ -44,8 +44,6 @@ load_mode() {
 insert_jump() {
     mode_vars "$1"
 
-    nft list chain "$TABLE" "$JUMP_CHAIN"
-
     nft insert rule "$TABLE" "$CHAIN_FWD" \
         jump "$JUMP_CHAIN" \
         comment "$COMMENT"

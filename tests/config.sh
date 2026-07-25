@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 
 # OUTFILE="results/results_$(date +%Y%m%d_%H%M%S).csv"
-OUTFILE="results/results.csv"
+OUTFILE="results/traffic_test_results.csv"
 
-REPS=1                 # repetitions per test for averaging
+REPS=10                 # repetitions per test for averaging
 
 BLOCKED_DOMAINS=()
 ALLOWED_DOMAINS=()
 BLOCKED_IP4=()
 BLOCKED_IP6=()
 
-BASE_DIR="/usr/local/lib/fwPi/config"
+#BASE_DIR="/usr/local/lib/fwPi/config"
+BASE_DIR="/Users/johannapauler/Desktop/fwPi/config"
 
-BLOCKLIST="$BASE_DIR/my_blocklist.txt"
-ALLOWLIST="$BASE_DIR/my_allowlist.txt"
+BLOCKLIST="$BASE_DIR/pihole/my_blocklist.txt"
+ALLOWLIST="$BASE_DIR/pihole/my_allowlist.txt"
 
 DENY_IPV4="$BASE_DIR/nftables/nft_sets/deny_ipv4.txt"
 DENY_IPV6="$BASE_DIR/nftables/nft_sets/deny_ipv6.txt"

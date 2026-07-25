@@ -74,16 +74,21 @@ cmd_status() {
             ;;
 
         td)
+            echo "---------------------------"
             echo "--- Traffic Drop chain ---"
+            echo
             nft list chain "$TABLE" "$CHAIN_TD"
             ;;
 
         tc)
+            echo "-----------------------------"
             echo "--- Traffic Control chain ---"
+            echo
             nft list chain "$TABLE" "$CHAIN_TC"
 
+            echo "-----------------------------"
+            echo "--- Traffic Control stats ---"
             echo
-            echo "--- tc statistics ---"
             tc -s class show dev "$IFACE"
             ;;
     esac

@@ -3,43 +3,24 @@
 test_dot() {
     local server=$1
     local stack=$2
-    local state=$3
 
-    for ((i=1; i<=REPS; i++)); do
+    start=$(now_ms)
 
-        start=$(now_ms)
+    # macOS fallback: rely on openssl returning after the handshake
+    out=$(openssl s_client -connect "${server}:853" </dev/null 2>&1)
 
-        if command -v timeout >/dev/null 2>&1; then
-            out=$(timeout 5 openssl s_client -connect "${server}:853" </dev/null 2>&1)
-        elif command -v gtimeout >/dev/null 2>&1; then
-            out=$(gtimeout 5 openssl s_client -connect "${server}:853" </dev/null 2>&1)
-        else
-            # macOS fallback: rely on openssl returning after the handshake
-            out=$(openssl s_client -connect "${server}:853" </dev/null 2>&1)
-        fi
+    rc=$?
 
-        end=$(now_ms)
-        ms=$((end-start))
+    end=$(now_ms)
+    ms=$((end-start))
 
-        if echo "$out" | grep -q "^CONNECTED"; then
-            connected=1
-        else
-            connected=0
-        fi
+    blocked=0
 
-        success=0
+    if [[ $rc -ne 0 ]] || ! grep -q "^CONNECTED" <<< "$out"; then
+        blocked=1
+    fi
 
-        if [[ "$state" == "rules_off" && "$connected" == 1 ]]; then
-            success=1
-        fi
-
-        if [[ "$state" == "rules_on" && "$connected" == 0 ]]; then
-            success=1
-        fi
-
-        echo "dot_block,$stack,$server,$i,$state,$ms,$success" >> "$OUTFILE"
-
-    done
+    echo "dot_block,$stack,$server,$i,$ms,$blocked" >> "$OUTFILE"
 }
 
 run_dot_block() {

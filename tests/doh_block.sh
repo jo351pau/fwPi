@@ -1,49 +1,45 @@
 #!/usr/bin/env bash
 
 test_doh() {
-    local url=$1
-    local stack=$2
-    local state=$3
+    local url="$1"
+    local domain="$2"
+    local stack="$3"
+    local rtype="$4"
 
-    for ((i=1; i<=REPS; i++)); do
+    local start
+    local end
+    local out
+    local rc
+    local ms
+    local blocked
+    local CURL_IP
 
-        start=$(now_ms)
+    if [[ "$stack" == "v4" ]]; then
+        CURL_IP="--ipv4"
+    else
+        CURL_IP="--ipv6"
+    fi
 
-        # forces curl to use adress family specified
-        if [[ "$stack" == "v4" ]]; then
-            CURL_IP="--ipv4"
-        else
-            CURL_IP="--ipv6"
-        fi
+    start=$(now_ms)
 
-        out=$(curl $CURL_IP -sS \
-            -H 'accept: application/dns-json' \
-            --max-time 5 \
-            "${url}?name=example.com&type=A" \
-            2>&1)
+    out=$(curl $CURL_IP -sS \
+        -H 'accept: application/dns-json' \
+        --max-time 4 \
+        "${url}?name=${domain}&type=${rtype}" \
+        2>&1)
 
-        rc=$?
+    rc=$?
 
-        end=$(now_ms)
-        ms=$((end-start))
+    end=$(now_ms)
+    ms=$((end-start))
 
-        if [[ $rc -eq 0 ]] && echo "$out" | grep -q '"Answer"'; then
-            connected=1
-        else
-            connected=0
-        fi
+    blocked=0
 
-        success=0
-        if [[ "$state" == "rules_off" && "$connected" == 1 ]]; then
-            success=1
-        fi
+    if [[ $rc -ne 0 ]] || ! grep -q '"Answer"' <<< "$out"; then
+        blocked=1
+    fi
 
-        if [[ "$state" == "rules_on" && "$connected" == 0 ]]; then
-            success=1
-        fi
-
-        csv_write "doh_block,$stack,$url,$i,$state,$ms,$success"
-    done
+    echo "doh_block,$stack,$domain,$rtype,$i,$ms,$blocked" >> "$OUTFILE"
 }
 
 run_doh() {
@@ -56,8 +52,13 @@ run_doh() {
         "https://dns.quad9.net/dns-query"
     )
 
-    for server in "${ipv4_servers[@]}"; do
-        test_doh "$server" "v4" "$state"
-        test_doh "$server" "v6" "$state"
+    for server in "${servers[@]}"; do
+        for domain in "${BLOCKED_DOMAINS[@]}"; do
+
+            test_doh "$server" "$domain" "v4" "A"
+            test_doh "$server" "$domain" "v6" "AAAA"
+
+        done
     done
+
 }

@@ -1,18 +1,47 @@
 #!/usr/bin/env bash
-# tests Piholes Blocklist
+#
+# Tests Pi-hole blocklist and DNS interception.
+#
+# CSV:
+#   test_type,server,target,record_type,trial,result_ms,blocked
+#
+# blocked:
+#   0 = not blocked
+#   1 = blocked
+#
+
+# ------------------------------------------------------------
+# DNS test
+# ------------------------------------------------------------
 
 test_dns() {
-    local domain=$1
-    local rtype=$2
-    local stack=$3
-    local expect=$4
-    local state=$5
+    local test_type="$1"
+    local server="$2"
+    local domain="$3"
+    local rtype="$4"
 
-    for ((i=1;i<=REPS;i++)); do
+    local start
+    local end
+    local result
+    local ms
+    local blocked
+
+    for ((i=1; i<=REPS; i++)); do
         start=$(now_ms)
-        result=$(dig +short +time=2 +tries=1 "$rtype" "$domain" | tr -d '\r')
+
+        result=$(
+            dig +short \
+                +time=2 \
+                +tries=1 \
+                "$domain" \
+                "$rtype" \
+                "@$server" |
+            tr -d '\r'
+        )
+
         end=$(now_ms)
-        m s=$((end-start))
+        ms=$((end - start))
+
         blocked=0
 
         case "$rtype" in
@@ -24,76 +53,42 @@ test_dns() {
                 ;;
         esac
 
-        success=0
-
-        # expect=1 means domain should resolve
-        # expect=0 means domain should be Pi-hole blocked
-        if [[ "$expect" == "1" && "$blocked" == "0" ]]; then
-            success=1
-        fi
-
-        if [[ "$expect" == "0" && "$blocked" == "1" ]]; then
-            success=1
-        fi
-
-        echo "dns_${rtype},${stack},${domain},${i},${state},${ms},${success}" >> "$OUTFILE"
+        echo \
+            "$test_type,$server,$domain,$rtype,$i,$ms,$blocked" \
+            >> "$OUTFILE"
     done
 }
+
+
+# ------------------------------------------------------------
+# Pi-hole interception
+# ------------------------------------------------------------
 
 run_dns_interception() {
+    local server="$PIHOLE_DNS"
 
-    local state=$1
-
-    if [[ "$state" == "rules_off" ]]; then
-        expected_blocked=1
-    else
-        expected_blocked=0
-    fi
-
-    for d in "${BLOCKED_DOMAINS[@]}"; do
-        test_dns "$d" "A" "v4" "$expected_blocked" "$state"
-        test_dns "$d" "AAAA" "v6" "$expected_blocked" "$state"
-    done
-
-    for d in "${ALLOWED_DOMAINS[@]}"; do
-        test_dns "$d" "A" "v4" 1 "$state"
-        test_dns "$d" "AAAA" "v6" 1 "$state"
+    for domain in "${BLOCKED_DOMAINS[@]}"; do
+        test_dns "dns_interception" "$server" "$domain" A
+        test_dns "dns_interception" "$server" "$domain" AAAA
     done
 }
 
-# With DNS bypass: $ dig @1.1.1.1 facebook.com -> 0.0.0.0
-# Because nftables is blocking other DNS and forcing redirect via Pihole
+
+# ------------------------------------------------------------
+# DNS bypass
+# ------------------------------------------------------------
 
 run_dns_bypass() {
-    local state=$1
-
     local servers=(
         "1.1.1.1"
         "8.8.8.8"
         "9.9.9.9"
     )
 
-    local test_domain="facebook.com"
-
     for server in "${servers[@]}"; do
-
-        for ((i=1;i<=REPS;i++)); do
-
-            start=$(now_ms)
-            answer=$(dig @"$server" "$test_domain" A +short +time=2 +tries=1)
-            end=$(now_ms)
-            ms=$((end-start))
-            success=0
-
-            if [[ "$state" == "rules_off" ]]; then
-                # External DNS should work
-                [[ -n "$answer" ]] && success=1
-            else
-                # External DNS should be intercepted by Pi-hole
-                [[ "$answer" == "0.0.0.0" ]] && success=1
-            fi
-
-            echo "dns_bypass,v4,$server,$i,$state,$ms,$success" >> "$OUTFILE"
+        for domain in "${BLOCKED_DOMAINS[@]}"; do
+            test_dns "dns_bypass" "$server" "$domain" A
+            test_dns "dns_bypass" "$server" "$domain" AAAA
         done
     done
 }

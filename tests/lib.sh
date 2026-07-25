@@ -36,10 +36,6 @@ run_ping_linux() {
     fi
 }
 
-csv_write() {
-    echo "$*" >> "$OUTFILE"
-}
-
 require_command() {
     command -v "$1" >/dev/null 2>&1 || {
         echo "Missing dependency: $1"

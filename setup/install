@@ -15,7 +15,9 @@
 
 set -euo pipefail
 
-source /usr/local/bin/fwPiCLI/config
+FWPI_REPO="$(pwd)"
+
+source $FWPI_REPO/setup/config
 
 # ============================================================
 # Checks
@@ -34,7 +36,7 @@ require_root() {
 echo
 echo "==> Installing dependencies"
 
-apt update
+apt update && apt upgrade
 
 apt install -y \
     git \
@@ -93,7 +95,7 @@ net.ipv4.ip_forward=1
 net.ipv6.conf.all.forwarding=1
 EOF
 
-sysctl --system
+sysctl --system >/dev/null # supress output but show errors
 
 # ============================================================
 # Configure WiFi Access Point
@@ -150,7 +152,6 @@ echo "Configuring nftables startup order"
 
 mkdir -p /etc/systemd/system/nftables.service.d
 
-
 cat >/etc/systemd/system/nftables.service.d/network.conf <<EOF
 [Unit]
 After=NetworkManager.service
@@ -180,8 +181,8 @@ cat <<EOF
 
 Configure Pi-hole:
 
-Open webinterface: http://
-Interface: $AP_IFACE
+Open webinterface: http://$WAN_IPV4/admin
+Interface: $LAN_IF
 IPv4 address: $WAN_IPV4
 IPv6 address: $WAN_IPV6
 

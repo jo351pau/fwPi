@@ -1,8 +1,8 @@
 # Testing
 
 ```bash
-$ chmod +x run.sh
-$ ./run.sh
+$ chmod +x run
+$ ./run
 ```
 This has been set up for MacOS (sorry). But can be used for Linux aswell with few alterations in ```/testing/config.s``h:
 - Adjust the basedirectory BASE_DIR
@@ -222,9 +222,10 @@ Server listening on 5201 (test #1)
 -----------------------------------------------------------
 ```
 
-Chose fw-censor mode on server and start client: ``iperf3 -c 192.168.50.1 -p 5201``
+Chose fw-censor mode on server and start client:
+``iperf3 -c 192.168.50.1 -p 5201 -t 30 --logfile /Users/johannapauler/Desktop/fwPi/tests/results/iperf3_results.txt``
 
-Wait till tests are finished.
+Wait till tests are finished. Results are logged under ./tests/results/iperf3_results.txt
 
 ```
 # measure latency added by netem

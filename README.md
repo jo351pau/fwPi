@@ -2,8 +2,6 @@
 
 ### Missing:
 #### git/code
-- add control over pihole blocklist to fw-censor
-- redo the setup scripts
 - Dpi/SNI (not happening right now) but some doh is filtered
 - systematic Tests for fw-censor tc with iperf3
 - Figure out what to do with those annoyingly slow timeouts
@@ -21,9 +19,14 @@
 - figure the figures in overleaf
 - edit the front pages
 
+==========================================================
+==========================================================
+
 Download rasp Imager and prepare micro SD with Raspian Trixie
 
 ### Setup and Lifecycle Management
+
+#### Set up static IPv4/IPv6 LAN address
 
 #### Installation
 cd to where you want to have your local git repo
