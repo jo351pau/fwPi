@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-# remove fwPi from lib
-sudo rm -dr /usr/local/lib/fwPi
-# clear nftables.conf (to be permanent this has to be better)
-sudo nftables flush /etc/nftables.conf
-

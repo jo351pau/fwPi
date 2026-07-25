@@ -1,0 +1,141 @@
+#!/usr/bin/env bash
+#
+# fwPi uninstaller
+#
+# Removes:
+#   - fwPi files
+#   - fw-censor CLI
+#   - WiFi access point
+#   - IP forwarding configuration
+#   - nftables configuration (restores backup)
+#   - nftables systemd override
+#
+# NOTE:
+#   Pi-hole is NOT uninstalled automatically.
+#   Dependencies (git, nftables, NetworkManager, ...) are kept.
+#
+# Run:
+#   sudo ./setup/uninstall.sh
+#
+
+set -euo pipefail
+
+source /usr/local/bin/fwPiCLI/config
+
+# ============================================================
+# Checks
+# ============================================================
+
+if [[ $EUID -ne 0 ]]; then
+    echo "Run as root:"
+    echo "sudo ./uninstall.sh"
+    exit 1
+fi
+
+# ============================================================
+# Stop fw-censor
+# ============================================================
+
+echo
+echo "==> Restoring base firewall"
+
+if command -v fw-censor >/dev/null 2>&1; then
+    fw-censor base || true
+fi
+
+# ============================================================
+# Remove CLI
+# ============================================================
+
+echo
+echo "==> Removing CLI"
+
+rm -f /usr/local/bin/fw-censor
+
+# ============================================================
+# Remove WiFi AP
+# ============================================================
+
+echo
+echo "==> Removing WiFi Access Point"
+
+if nmcli connection show "$AP_NAME" >/dev/null 2>&1; then
+    nmcli connection down "$AP_NAME" || true
+    nmcli connection delete "$AP_NAME"
+fi
+
+# ============================================================
+# Restore nftables
+# ============================================================
+
+echo
+echo "==> Restoring nftables"
+
+if [[ -f "$NFT_BACKUP" ]]; then
+    cp "$NFT_BACKUP" "$NFT_TARGET"
+    rm -f "$NFT_BACKUP"
+
+    systemctl restart nftables
+
+    echo "Original nftables.conf restored."
+else
+    echo "No backup found."
+fi
+
+# ============================================================
+# Remove IP forwarding configuration
+# ============================================================
+
+echo
+echo "==> Removing IP forwarding"
+
+rm -f /etc/sysctl.d/99-fwPi.conf
+
+sysctl --system
+
+# ============================================================
+# Remove systemd override
+# ============================================================
+
+echo
+echo "==> Removing nftables systemd override"
+
+rm -rf /etc/systemd/system/nftables.service.d
+
+systemctl daemon-reload
+
+# ============================================================
+# Remove fwPi files
+# ============================================================
+
+echo
+echo "==> Removing fwPi"
+
+rm -rf "$FWPI_DIR"
+
+# ============================================================
+# Pi-hole
+# ============================================================
+
+echo
+echo "==> Pi-hole"
+
+if command -v pihole >/dev/null 2>&1; then
+    cat <<EOF
+
+Pi-hole has NOT been removed.
+
+You may want to:
+  - Disable/remove the fwPi blocklist
+  - Disable the Pi-hole DHCP server
+  - Uninstall Pi-hole manually if desired
+
+EOF
+fi
+
+# ============================================================
+# Finish
+# ============================================================
+
+echo
+echo "==> fwPi successfully removed."

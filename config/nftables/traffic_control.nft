@@ -9,7 +9,7 @@
 
 table inet filter {
     chain traffic_control {
-        type filter hook forward priority -150;
+        # type filter hook forward priority -150;
         # priority -150 - runs before filter forward (priority 0)
         # ensures marking happens before any filter decisions
 

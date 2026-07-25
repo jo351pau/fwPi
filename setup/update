@@ -1,0 +1,52 @@
+#!/usr/bin/env bash
+#
+# fwPi updater
+#
+# Updates an existing fwPi installation.
+#
+# - Discards local Git changes
+# - Pulls the latest version
+# - Deploys updated files
+# - Reloads the current firewall mode
+#
+# Run:
+#   sudo ./setup/update.sh
+#
+
+set -euo pipefail
+
+source /usr/local/bin/fwPiCLI/config
+
+if [[ $EUID -ne 0 ]]; then
+    echo "Run as root:"
+    echo "sudo ./setup/update.sh"
+    exit 1
+fi
+
+echo
+echo "==> Updating local repository"
+
+git reset --hard HEAD
+git pull --ff-only
+
+echo
+echo "==> Updating fwPi installation"
+
+rm -rf "$FWPI_DIR"
+cp -a "$FWPI_REPO" "$FWPI_DIR"
+
+echo
+echo "==> Updating CLI"
+
+ln -sf "$FWCLI/fw-censor" /usr/local/bin/fw-censor
+chmod +x "$FWCLI/fw-censor"
+
+echo
+echo "==> Reloading current configuration"
+
+if command -v fw-censor >/dev/null 2>&1; then
+    fw-censor reload
+fi
+
+echo
+echo "==> Update complete."

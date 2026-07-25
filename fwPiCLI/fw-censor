@@ -1,16 +1,12 @@
 #!/bin/bash
 
-# /usr/local/bin/fwPiCLI/fw-censor
+# /usr/local/bin/fw-censor
 # Censorship testbed CLI
-# Modes: td (traffic drop) | tc (traffic control) | base (passthrough)
 #
-# Usage:
-#   fw-censor td            — full IP/protocol blocking
-#   fw-censor tc          — rate-limit censored traffic
-#   fw-censor tc 64kbit   — throttle at custom rate
-#   fw-censor base           — passthrough, no filtering
-#   fw-censor status            — current mode + counters
-#   fw-censor reload            — reload blocklists from disk
+# Modes:
+#   base  - Normal access point
+#   td    - Traffic Drop
+#   tc    - Traffic Control
 
 set -euo pipefail
 
@@ -19,34 +15,44 @@ LIB_DIR="/usr/local/lib/fwPi/fwPiCLI"
 source "$LIB_DIR/config"
 source "$LIB_DIR/lib"
 
-
 # -----------------------------------------------------------
 # commands
 # -----------------------------------------------------------
-cmd_td() {
-  teardown_all
-  load_mode td
-  insert_jump td
-  set_mode td
-  echo "td mode active"
-}
-
-cmd_tc() {
-  local rate="${1:-$TC_RATE}"
-
-  teardown_all
-  load_mode tc
-  insert_jump tc
-  tc_setup "$rate"
-  set_mode tc
-  echo "tc mode active"
-}
-
 cmd_base() {
   teardown_all
   nft -f "$NFT_BASE"
+
+  pihole_disable
+
   set_mode "base"
-  echo "Base fw active."
+  echo "Base access point active"
+}
+
+cmd_td() {
+  teardown_all
+
+  pihole_enable
+
+  load_mode td
+  insert_jump td
+
+  set_mode td
+  echo "Traffic Drop mode active"
+}
+
+cmd_tc() {
+  local rate="${2:-$TC_RATE}"
+
+  teardown_all
+
+  pihole_enable
+
+  load_mode tc
+  insert_jump tc
+  tc_setup "$rate"
+
+  set_mode tc
+  echo "Traffic Control access point active"
 }
 
 cmd_status() {
@@ -57,25 +63,30 @@ cmd_status() {
     echo "==============================="
     echo " fw-censor status"
     echo "==============================="
-    echo " Mode: $mode"
-    echo ""
+    echo "Mode              : $mode"
+    echo "Pi-hole blocklist : $(pihole_status)"
+    echo "TC tree           : $(tc_status)"
+    echo
 
-    echo "--- nftables forward chain ---"
-    nft list chain "$TABLE" "$CHAIN_FWD" 2>/dev/null || echo "(not loaded)"
+    case "$mode" in
+        base)
+            echo "Normal access point."
+            ;;
 
-    echo ""
-    echo "--- traffic_drop chain counters ---"
-    nft list chain "$TABLE" "$CHAIN_TD" 2>/dev/null || echo "(not active)"
+        td)
+            echo "--- Traffic Drop chain ---"
+            nft list chain "$TABLE" "$CHAIN_TD"
+            ;;
 
-    if [[ "$mode" == "tc" ]]; then
-      echo ""
-      echo "--- traffic_control chain ---"
-      nft list chain "$TABLE" "$CHAIN_TC" 2>/dev/null || echo "(not active)"
+        tc)
+            echo "--- Traffic Control chain ---"
+            nft list chain "$TABLE" "$CHAIN_TC"
 
-      echo ""
-      echo "--- traffic_control classes (bytes/packets) ---"
-      tc -s class show dev "$IFACE" 2>/dev/null || echo "(not active)"
-    fi
+            echo
+            echo "--- tc statistics ---"
+            tc -s class show dev "$IFACE"
+            ;;
+    esac
 }
 
 # reload always uses default rate for tc
@@ -86,20 +97,56 @@ cmd_reload() {
     echo "Reloading $mode configuration..."
 
     case "$mode" in
+      base)
+          nft -f "$NFT_BASE"
+          ;;
       td|tc)
           teardown_all
           nft -f "$NFT_BASE"
+
           load_mode "$mode"
           insert_jump "$mode"
 
           [[ "$mode" == tc ]] && tc_setup
           ;;
-      base)
-        nft -f "$NFT_BASE"
-        ;;
     esac
 
-    echo "Done reloading."
+    echo "Done."
+}
+
+usage() {
+cat <<EOF
+Usage:
+  fw-censor <command> [options]
+
+Commands:
+  base
+      Normal access point.
+      Disables Traffic Drop and Traffic Control.
+
+  td
+      Enable Traffic Drop.
+      Matching traffic is dropped.
+
+  tc [rate]
+      Enable Traffic Control.
+      Matching traffic is rate-limited.
+
+      Default rate: $TC_RATE
+      Example:
+        fw-censor tc 64kbit
+
+  status
+      Show the current mode and runtime status.
+
+  reload
+      Reload the active configuration.
+
+Modes:
+  base    Normal access point
+  td      Traffic Drop
+  tc      Traffic Control
+EOF
 }
 
 # -----------------------------------------------------------
@@ -108,27 +155,8 @@ cmd_reload() {
 case "${1:-}" in
     base)   cmd_base ;;
     td)     cmd_td ;;
-    tc)     cmd_tc "${1:-$TC_RATE}" ;;
+    tc)     cmd_tc "${2:-$TC_RATE}" ;; # This takes the second arg or default rate
     status) cmd_status ;;
     reload) cmd_reload ;;
-    *)
-        cat <<EOF
-Usage: fw-censor <command> [options]
-
-Commands:
-  base         Normal access point (base nftables)
-  td           Drop traffic matching the traffic_drop rules
-  tc [rate]    Rate-limit traffic matching the traffic_control rules
-               Default rate: 128kbit
-               Example: fw-censor tc 64kbit
-  status       Show current mode and counters
-  reload       Reload the current mode
-
-Modes:
-  base    Base firewall only
-  td      traffic_drop (drop matching traffic)
-  tc      traffic_control (shape matching traffic)
-EOF
-        exit 1
-        ;;
+    *)      usage exit 1 ;;
 esac

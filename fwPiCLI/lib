@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# /usr/local/bin/fwPiCLI/
+# /usr/local/lib/fwPi/fwPiCLI
 #
 # -----------------------------------------------------------
 # maps a mode to variables
@@ -26,7 +26,7 @@ mode_vars() {
 }
 
 # -----------------------------------------------------------
-# nftables helpers
+# general helpers
 # -----------------------------------------------------------
 current_mode() {
     [[ -f "$STATUS_FILE" ]] && cat "$STATUS_FILE" || echo base
@@ -43,6 +43,8 @@ load_mode() {
 
 insert_jump() {
     mode_vars "$1"
+
+    nft list chain "$TABLE" "$JUMP_CHAIN"
 
     nft insert rule "$TABLE" "$CHAIN_FWD" \
         jump "$JUMP_CHAIN" \
@@ -67,22 +69,31 @@ remove_jump() {
         nft delete rule "$TABLE" "$CHAIN_FWD" handle "$handle"
 }
 
+teardown_all() {
+    for mode in td tc; do
+        remove_jump "$mode" 2>/dev/null || true
+        flush_mode "$mode" 2>/dev/null || true
+    done
+
+    tc_teardown 2>/dev/null || true
+}
+
 # -----------------------------------------------------------
 # traffic_control helpers
 # -----------------------------------------------------------
 tc_setup() {
-    local rate="${1:-$TC_RATE}"
+    local rate="${2:-$TC_RATE}"
 
     tc qdisc add dev "$IFACE" root handle 1: htb default 10
 
     tc class add dev "$IFACE" parent 1: classid 1:1 \
         htb rate "$TOTAL_RATE"
 
-    # normal traffic — full rate
+    # normal traffic - full rate
     tc class add dev "$IFACE" parent 1:1 classid 1:10 \
         htb rate "$TOTAL_RATE" ceil "$TOTAL_RATE"
 
-    # tc traffic — rate limited + latency
+    # tc traffic - rate limited + latency
     tc class add dev "$IFACE" parent 1:1 classid 1:20 \
         htb rate "$rate" ceil "$TC_CEIL"
 
@@ -96,18 +107,67 @@ tc_setup() {
         handle 1 fw flowid 1:20
 }
 
+tc_status() {
+    #  infer from tc qdisc state
+    if tc qdisc show dev "$IFACE" | grep -q "htb\|tbf\|hfsc"; then
+        echo "enabled"
+    else
+        echo "disabled"
+    fi
+}
+
 tc_teardown() {
     tc qdisc del dev "$IFACE" root 2>/dev/null || true
 }
 
 # -----------------------------------------------------------
-# teardown all filtering — shared cleanup
+# pihole helpers
 # -----------------------------------------------------------
-teardown_all() {
-    for mode in td tc; do
-        remove_jump "$mode" 2>/dev/null || true
-        flush_mode "$mode" 2>/dev/null || true
-    done
+pihole_enable() {
+    if [[ ! -r "$PIHOLE_BLOCKLIST_SRC" ]]; then
+        echo "Pi-hole blocklist source not readable: $PIHOLE_BLOCKLIST_SRC" >&2
+        return 1
+    fi
 
-    tc_teardown 2>/dev/null || true
+    local id
+    id=$(sqlite3 "$PIHOLE_GRAVITY_DB" "SELECT id FROM adlist WHERE address = '$PIHOLE_BLOCKLIST_ADDR';")
+
+    if [[ -z "$id" ]]; then
+        sqlite3 "$PIHOLE_GRAVITY_DB" "INSERT INTO adlist (address, enabled, comment) VALUES ('$PIHOLE_BLOCKLIST_ADDR', 1, 'fw-censor managed list');"
+    else
+        sqlite3 "$PIHOLE_GRAVITY_DB" "UPDATE adlist SET enabled = 1 WHERE id = $id;"
+    fi
+
+    pihole -g >/var/log/fw-censor-gravity.log 2>&1
+}
+
+pihole_disable() {
+    local id
+    id=$(sqlite3 "$PIHOLE_GRAVITY_DB" "SELECT id FROM adlist WHERE address = '$PIHOLE_BLOCKLIST_ADDR';")
+
+    [[ -z "$id" ]] && return 0   # was never registered — nothing to do
+
+    sqlite3 "$PIHOLE_GRAVITY_DB" "UPDATE adlist SET enabled = 0 WHERE id = $id;"
+
+    pihole -g >/var/log/fw-censor-gravity.log 2>&1
+}
+
+pihole_status() {
+    local enabled ftl_state list_state
+
+    enabled=$(sqlite3 "$PIHOLE_GRAVITY_DB" "SELECT enabled FROM adlist WHERE address = '$PIHOLE_BLOCKLIST_ADDR';" 2>/dev/null || true)
+
+    case "$enabled" in
+        1) list_state="enabled" ;;
+        0) list_state="disabled" ;;
+        *) list_state="not registered" ;;
+    esac
+
+    if systemctl is-active --quiet "$PIHOLE_FTL_SERVICE"; then
+        ftl_state="running"
+    else
+        ftl_state="STOPPED (!)"   # DNS is broken if this ever shows
+    fi
+
+    echo "$list_state (pihole-FTL: $ftl_state)"
 }

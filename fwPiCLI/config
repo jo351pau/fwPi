@@ -6,7 +6,11 @@
 # configuration
 # -----------------------------------------------------------
 # shellcheck disable=SC2034
-# darf man so?
+PIHOLE_BLOCKLIST_SRC="/usr/local/lib/fwPi/config/pihole/my_blocklist.txt"
+PIHOLE_BLOCKLIST_ADDR="file://${PIHOLE_BLOCKLIST_SRC}"
+PIHOLE_GRAVITY_DB="/etc/pihole/gravity.db"
+PIHOLE_FTL_SERVICE="pihole-FTL.service"
+
 NFT_BASE="/etc/nftables.conf"
 NFT_TD="/usr/local/lib/fwPi/config/nftables/traffic_drop.nft"
 NFT_TC="/usr/local/lib/fwPi/config/nftables/traffic_control.nft"

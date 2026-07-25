@@ -1,0 +1,215 @@
+#!/usr/bin/env bash
+#
+# fwPi installer
+#
+# Installs:
+#   - fwPi firewall controller
+#   - nftables configuration
+#   - WiFi access point
+#   - Pi-hole integration
+#   - traffic control dependencies
+#
+# Run:
+#   sudo ./setup/install.sh
+#
+
+set -euo pipefail
+
+source /usr/local/bin/fwPiCLI/config
+
+# ============================================================
+# Checks
+# ============================================================
+require_root() {
+    if [[ $EUID -ne 0 ]]; then
+        echo "Run as root:"
+        echo "sudo ./install.sh"
+        exit 1
+    fi
+}
+
+# ============================================================
+# Install dependencies
+# ============================================================
+echo
+echo "==> Installing dependencies"
+
+apt update
+
+apt install -y \
+    git \
+    nftables \
+    iproute2 \
+    network-manager \
+    sqlite3
+
+# ============================================================
+# Install fwPi files
+# ============================================================
+echo
+echo "==> Installing fwPi"
+
+if [[ -d "$FWPI_DIR" ]]; then
+    echo "Existing installation found"
+    echo "Updating files..."
+    rm -rf "$FWPI_DIR"
+fi
+
+cp -dr "$FWPI_REPO" "$FWPI_DIR"
+
+# ============================================================
+# Install CLI commands
+# ============================================================
+echo
+echo "==> Installing CLI"
+
+# create symlink for fw-censor
+ln -sf "$FWCLI/fw-censor" /usr/local/bin/fw-censor
+
+chmod +x "$FWCLI/fw-censor"
+
+# ============================================================
+# nftables configuration
+# ============================================================
+echo
+echo "==> Configuring nftables"
+
+if [[ -f "$NFT_TARGET" ]]; then
+    cp "$NFT_TARGET" "$NFT_BACKUP"
+    echo "Backup created:"
+    echo "$NFT_BACKUP"
+fi
+
+cp "$NFT_CONFIG" "$NFT_TARGET"
+
+# ============================================================
+# Enable IP forwarding
+# ============================================================
+echo
+echo "==> Enabling IP forwarding"
+
+cat >/etc/sysctl.d/99-fwPi.conf <<EOF
+net.ipv4.ip_forward=1
+net.ipv6.conf.all.forwarding=1
+EOF
+
+sysctl --system
+
+# ============================================================
+# Configure WiFi Access Point
+# ============================================================
+echo
+echo "==> Creating WiFi AP"
+
+if nmcli connection show "$AP_NAME" >/dev/null 2>&1; then
+    echo "Existing AP found: $AP_NAME"
+else
+
+    while true; do
+        read -rsp "Enter WiFi password: " PW1
+        echo
+        read -rsp "Repeat WiFi password: " PW2
+        echo
+
+        if [[ "$PW1" == "$PW2" && ${#PW1} -ge 8 ]]; then
+            AP_PASSWORD="$PW1"
+            break
+        fi
+
+        echo "Passwords do not match or are too short."
+    done
+
+    nmcli connection add \
+        type wifi \
+        ifname "$LAN_IF" \
+        con-name "$AP_NAME" \
+        autoconnect yes \
+        802-11-wireless.mode ap \
+        802-11-wireless.band bg \
+        ipv4.method manual \
+        ipv4.addresses "$LAN_IPV4" \
+        ipv6.method manual \
+        ipv6.addresses "$LAN_IPV6" \
+        wifi-sec.key-mgmt wpa-psk \
+        wifi-sec.psk "$AP_PASSWORD"
+fi
+
+nmcli connection up "$AP_NAME"
+
+# ============================================================
+# nftables service
+# ============================================================
+echo
+echo "==> Starting nftables"
+
+systemctl enable nftables
+systemctl restart nftables
+
+# nftables service ordering
+echo "Configuring nftables startup order"
+
+mkdir -p /etc/systemd/system/nftables.service.d
+
+
+cat >/etc/systemd/system/nftables.service.d/network.conf <<EOF
+[Unit]
+After=NetworkManager.service
+Wants=NetworkManager.service
+EOF
+
+systemctl daemon-reload
+
+# ============================================================
+# Pi-hole setup
+# ============================================================
+echo
+echo "==> Installing Pi-hole"
+
+if command -v pihole >/dev/null
+then
+    echo "Pi-hole already installed"
+else
+
+curl -sSL https://install.pi-hole.net | bash
+
+fi
+
+cat <<EOF
+
+============================================================
+
+Configure Pi-hole:
+
+Open webinterface: http://
+Interface: $AP_IFACE
+IPv4 address: $WAN_IPV4
+IPv6 address: $WAN_IPV6
+
+Enable: DHCP server
+Range: 192.168.50.10 - 192.168.50.200
+Gateway: 192.168.50.1
+
+
+Add blocklist: $PIHOLE_LIST
+
+============================================================
+
+EOF
+
+pihole -g
+
+# ============================================================
+# Finish
+# ============================================================
+echo
+echo "==> Installation complete"
+
+echo "
+Available commands:
+
+fw-censor base
+fw-censor td
+fw-censor tc
+fw-censor status
+
+"
