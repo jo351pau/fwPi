@@ -68,6 +68,13 @@ remove_jump() {
 }
 
 teardown_all() {
+    # flush connection tracking
+    conntrack -F
+
+    # Clear DNS resolver cache
+    pihole reloadlists
+    pihole reloaddns
+
     for mode in td tc; do
         remove_jump "$mode" 2>/dev/null || true
         flush_mode "$mode" 2>/dev/null || true

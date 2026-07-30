@@ -20,6 +20,7 @@ source "$LIB_DIR/lib"
 # -----------------------------------------------------------
 cmd_base() {
   teardown_all
+
   nft -f "$NFT_BASE"
 
   pihole_disable
@@ -45,7 +46,7 @@ cmd_tc() {
 
   teardown_all
 
-  pihole_enable
+  pihole_disable # ummm right ?
 
   load_mode tc
   insert_jump tc
@@ -103,16 +104,13 @@ cmd_reload() {
 
     case "$mode" in
       base)
-          nft -f "$NFT_BASE"
+          cmd_base
           ;;
-      td|tc)
-          teardown_all
-          nft -f "$NFT_BASE"
-
-          load_mode "$mode"
-          insert_jump "$mode"
-
-          [[ "$mode" == tc ]] && tc_setup
+      td)
+          cmd_td
+          ;;
+      tc)
+          cmd_tc
           ;;
     esac
 

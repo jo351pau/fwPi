@@ -20,10 +20,9 @@ source "./import_lists.sh"
 source "./dns_test.sh"
 source "./ip_block.sh"
 source "./dot_block.sh"
-source "./quic_block.sh"
-source "./latency.sh"
+source "./doq_block.sh"
 source "./doh_block.sh"
-source "./ech_block.sh"
+source "./quic_block.sh"
 
 import_lists
 
@@ -34,30 +33,37 @@ run_all () {
     log "run_dns_interception -> done"
     run_dns_bypass
     log "run_dns_bypass -> done"
-    run_doh
+    run_doh_block
     log "run_doh -> done"
     run_dot_block
     log "run_dot_block -> done"
+    run_doq_block
+    log "run_doq_block -> done"
     run_quic_block
     log "run_quic_block -> done"
-
-    echo > "$OUTFILE"
 }
 
-echo "test_type,stack,target,trial,rules_state,result_ms,success" > "$OUTFILE"
+run_mode() {
+    local mode="$1"
 
-log "=== Base Mode ==="
-read -p "Enable Base mode, then press Enter..."
-run_all
+    CURRENT_MODE="$mode"
 
-log "=== Traffic Control Mode ==="
-read -p "Enable Traffic Control Mode, then press Enter..."
-run_all
+    echo
+    echo "========================================"
+    echo " Testing mode: $mode"
+    echo "========================================"
 
+    read -rp "Set fw-censor to '$mode', then press Enter..."
 
-log "=== Traffic Drop Mode ==="
-read -p "Enable Traffic Drop Mode, then press Enter..."
-run_all
+    run_all
+
+    echo "Finished: $mode"
+}
+
+echo "test_type,stack,server,domain,ms,blocked" > $OUTFILE
+run_mode base
+# run_mode td
+# run_mode tc
 
 aggregate_results
 

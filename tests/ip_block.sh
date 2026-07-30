@@ -20,11 +20,11 @@ test_ip_block() {
 
     blocked=1
     if echo "$out" | grep -qE 'bytes from|time[=<]'; then
-        reachable=1
+        blocked=0
     fi
 
     end=$(now_ms)
     ms=$((end-start))
 
-    echo "ip_block,$stack,$ip,$i,$ms,$blocked" >> "$OUTFILE"
+    csv_write "ip_block,$stack,"-",$ip,$ms,$blocked"
 }

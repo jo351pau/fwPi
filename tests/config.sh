@@ -1,16 +1,16 @@
 #!/usr/bin/env bash
 
 # OUTFILE="results/results_$(date +%Y%m%d_%H%M%S).csv"
-OUTFILE="results/traffic_test_results.csv"
-
-REPS=10                 # repetitions per test for averaging
+OUTFILE="results/test_results.csv"
+CURRENT_MODE=""
 
 BLOCKED_DOMAINS=()
 ALLOWED_DOMAINS=()
 BLOCKED_IP4=()
 BLOCKED_IP6=()
 
-#BASE_DIR="/usr/local/lib/fwPi/config"
+PIHOLE_DNS="192.168.50.1"
+
 BASE_DIR="/Users/johannapauler/Desktop/fwPi/config"
 
 BLOCKLIST="$BASE_DIR/pihole/my_blocklist.txt"
@@ -29,3 +29,6 @@ RUN_PING="run_ping_mac" # On MacOS Client
 # Find path (usually at /opt/homebrew/opt/curl/bin/curl)
 CURL="/opt/homebrew/opt/curl/bin/curl"
 
+# for MacOS: brew install coreutils
+TIMEOUT="gtimeout 3"
+# TIMEOUT="timeout 5"

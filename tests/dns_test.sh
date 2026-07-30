@@ -18,45 +18,38 @@ test_dns() {
     local test_type="$1"
     local server="$2"
     local domain="$3"
-    local rtype="$4"
+    local stack="$4"
 
-    local start
-    local end
-    local result
-    local ms
-    local blocked
+    if [[ "$stack" == "v4" ]]; then
+        STACK=$"-4"
+        RECORD=$"A"
+    else
+        STACK=$"-6"
+        RECORD=$"AAAA"
+    fi
 
-    for ((i=1; i<=REPS; i++)); do
-        start=$(now_ms)
+    start=$(now_ms)
 
-        result=$(
-            dig +short \
-                +time=2 \
-                +tries=1 \
-                "$domain" \
-                "$rtype" \
-                "@$server" |
-            tr -d '\r'
-        )
+    # dig -4 +short +time=2 +tries=1 facebook.com A @1.1.1.1
+    # dig -4 +short +time=2 +tries=1 facebook.com A @192.168.50.1
+    out=$(dig $STACK +short +time=2 +tries=1 "$domain" $RECORD "@$server" | tr -d '\r')
 
-        end=$(now_ms)
-        ms=$((end - start))
+    end=$(now_ms)
+    ms=$((end - start))
 
-        blocked=0
+    blocked=0
 
-        case "$rtype" in
-            A)
-                [[ "$result" == "0.0.0.0" ]] && blocked=1
-                ;;
-            AAAA)
-                [[ "$result" == "::" ]] && blocked=1
-                ;;
-        esac
+    case "$stack" in
+        v4)
+            [[ "$result" == "0.0.0.0" ]] && blocked=1
+            ;;
+        v6)
+            [[ "$result" == "::" ]] && blocked=1
+            ;;
+    esac
 
-        echo \
-            "$test_type,$server,$domain,$rtype,$i,$ms,$blocked" \
-            >> "$OUTFILE"
-    done
+    csv_write "$test_type,$stack,$server,$domain,$ms,$blocked"
+
 }
 
 
@@ -68,8 +61,8 @@ run_dns_interception() {
     local server="$PIHOLE_DNS"
 
     for domain in "${BLOCKED_DOMAINS[@]}"; do
-        test_dns "dns_interception" "$server" "$domain" A
-        test_dns "dns_interception" "$server" "$domain" AAAA
+        test_dns "dns_interception" "$server" "$domain" v4
+        test_dns "dns_interception" "$server" "$domain" v6
     done
 }
 
@@ -87,8 +80,8 @@ run_dns_bypass() {
 
     for server in "${servers[@]}"; do
         for domain in "${BLOCKED_DOMAINS[@]}"; do
-            test_dns "dns_bypass" "$server" "$domain" A
-            test_dns "dns_bypass" "$server" "$domain" AAAA
+            test_dns "dns_bypass" "$server" "$domain" v4
+            test_dns "dns_bypass" "$server" "$domain" v6
         done
     done
 }

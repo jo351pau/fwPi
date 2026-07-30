@@ -43,15 +43,41 @@ require_command() {
     }
 }
 
+csv_write() {
+    printf '%s,%s\n' "$CURRENT_MODE,$*" >> "$OUTFILE"
+}
+
 aggregate_results() {
+    local summary="${OUTFILE%.csv}_summary.csv"
+
+    printf '%s\n' \
+        "mode,avg_latency_ms,block_rate_percent,total_tests,blocked_tests" \
+        > "$summary"
+
     awk -F, '
+    NR == 1 { next }
+
     {
-        key=$1 "-" $2 "-" $5
-        sum[key]+=$7
-        n[key]++
+        mode = $1
+
+        latency_sum[mode] += $5
+        total[mode]++
+
+        if ($6 == 1)
+            blocked[mode]++
     }
+
     END {
-        for (k in sum)
-            print k, sum[k]/n[k]
-    }' "$OUTFILE"
+        for (mode in total) {
+            printf "%s,%.2f,%.2f,%d,%d\n",
+                mode,
+                    latency_sum[mode] / total[mode],
+                    100 * blocked[mode] / total[mode],
+                    total[mode],
+                    blocked[mode]
+        }
+    }
+    ' "$OUTFILE" >> "$summary"
+
+    echo "Summary written to: $summary"
 }

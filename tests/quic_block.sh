@@ -7,25 +7,26 @@ test_quic() {
 
     # forces curl to use adress family specified
     if [[ "$stack" == "v4" ]]; then
-        CURL_IP="--ipv4"
+        STACK=$"--ipv4"
     else
-        CURL_IP="--ipv6"
+        STACK=$"--ipv6"
     fi
 
     start=$(now_ms)
 
-    out=$($CURL --http3 -I -s "$url" 2>&1)
+    out=$($CURL $STACK --http3 -I -s "$url" 2>&1)
+    rc=$?
 
     end=$(now_ms)
     ms=$((end-start))
 
     blocked=1
 
-    if echo "$out" | grep -q "^HTTP/3"; then
+    if [[ $rc -eq 0 ]] && grep -q "^HTTP/3"; then
         blocked=0
     fi
 
-    echo "quic_block,$stack,$url,$i,,$ms,$blocked" >> "$OUTFILE"
+    csv_write "quic_block,$stack,"-",$url,$ms,$blocked"
 
 }
 

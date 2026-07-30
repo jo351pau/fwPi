@@ -11,12 +11,14 @@ This has been set up for MacOS (sorry). But can be used for Linux aswell with fe
 - Adjust the curl command for http3/QUIC traffic CURL
 
 ToDo
-- Dns bypass could be better
 - ip_block,v4,3.251.50.149,1,rules_off,2067,0
   ip_block,v4,54.155.178.5,1,rules_off,2072,0
   ip_block,v4,54.74.73.31,1,rules_off,2066,0 
   also ipv6 for Netflix 
   why cant I ping Netflix with rules off ? ?
+- DoT is blocked in Basemode
+- adjust timeouts
+- Add ech test
 
 ### Layer 1: Pi-hole DNS filtering
 dns_interception.sh    
@@ -223,7 +225,9 @@ Server listening on 5201 (test #1)
 ```
 
 Chose fw-censor mode on server and start client:
-``iperf3 -c 192.168.50.1 -p 5201 -t 30 --logfile /Users/johannapauler/Desktop/fwPi/tests/results/iperf3_results.txt``
+``iperf3 -c 192.168.50.1 -p 5201 -t 30 --logfile /Users/johannapauler/Desktop/fwPi/tests/results/iperf3_base.txt``
+``iperf3 -c 192.168.50.1 -p 5201 -t 30 --logfile /Users/johannapauler/Desktop/fwPi/tests/results/iperf3_td.txt``
+``iperf3 -c 192.168.50.1 -p 5201 -t 30 --logfile /Users/johannapauler/Desktop/fwPi/tests/results/iperf3_tc.txt``
 
 Wait till tests are finished. Results are logged under ./tests/results/iperf3_results.txt
 

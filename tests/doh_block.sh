@@ -1,31 +1,25 @@
 #!/usr/bin/env bash
 
 test_doh() {
-    local url="$1"
+    local server="$1"
     local domain="$2"
     local stack="$3"
-    local rtype="$4"
-
-    local start
-    local end
-    local out
-    local rc
-    local ms
-    local blocked
-    local CURL_IP
 
     if [[ "$stack" == "v4" ]]; then
-        CURL_IP="--ipv4"
+        STACK=$"--ipv4"
+        RECORD=$"A"
     else
-        CURL_IP="--ipv6"
+        STACK=$"--ipv6"
+        RECORD=$"AAAA"
     fi
 
     start=$(now_ms)
 
-    out=$(curl $CURL_IP -sS \
+    # /opt/homebrew/opt/curl/bin/curl --ipv4 -sS -H 'accept: application/dns-json' --max-time 4 ""https://cloudflare-dns.com/dns-query"?name=facebook.com&type=A"
+    out=$($CURL $STACK -sS \
         -H 'accept: application/dns-json' \
         --max-time 4 \
-        "${url}?name=${domain}&type=${rtype}" \
+        "${server}?name=${domain}&type=$RECORD" \
         2>&1)
 
     rc=$?
@@ -35,29 +29,28 @@ test_doh() {
 
     blocked=0
 
-    if [[ $rc -ne 0 ]] || ! grep -q '"Answer"' <<< "$out"; then
+    # rc 28 is timeout and should happen in case of failure due to tc or test_doh
+    # there are some other cases where rc=35 or rc=0 but instead of "answer" section I get "authority" section
+    if [[ $rc -eq 28 ]] <<< "$out"; then
         blocked=1
     fi
 
-    echo "doh_block,$stack,$domain,$rtype,$i,$ms,$blocked" >> "$OUTFILE"
+
+    csv_write "doh_block,$stack,$server,$domain,$ms,$blocked"
+
 }
 
-run_doh() {
-
-    local state=$1
-
+run_doh_block() {
     local ipv4_servers=(
         "https://cloudflare-dns.com/dns-query"
         "https://dns.google/resolve"
         "https://dns.quad9.net/dns-query"
     )
 
-    for server in "${servers[@]}"; do
+    for server in "${ipv4_servers[@]}"; do
         for domain in "${BLOCKED_DOMAINS[@]}"; do
-
-            test_doh "$server" "$domain" "v4" "A"
-            test_doh "$server" "$domain" "v6" "AAAA"
-
+            test_doh "$server" "$domain" "v4"
+            test_doh "$server" "$domain" "v6"
         done
     done
 
