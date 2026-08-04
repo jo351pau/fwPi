@@ -1,8 +1,8 @@
 # Testing
 
 ```bash
-$ chmod +x run
-$ ./run
+$ chmod +x run.sh
+$ ./run.sh
 ```
 This has been set up for MacOS (sorry). But can be used for Linux aswell with few alterations in ```/testing/config.s``h:
 - Adjust the basedirectory BASE_DIR
@@ -213,10 +213,10 @@ Ping/RTT baseline
 ### throttling 
 
 From Mac client - install iperf3: ``$ brew install iperf3``
-From Debian server - install iperf3: ``$ sudo apt install iperf3``
+From arch server - install iperf3: ``$ pacman -S iperf3``
 
 Adjust server fw to temporary allow tcp input on 5201: ``$ nft add rule inet filter input iifname "$LAN_IF" tcp dport 5201 accept``
-
+Adjust ip blocklist
 Start server: ``$ iperf3 -s``
 ```
 -----------------------------------------------------------

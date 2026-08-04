@@ -24,7 +24,7 @@ WAN_IPV6=$(ip -6 -br addr show "$WAN_IF" | awk '{print $3}' | cut -d/ -f1)
 LAN_IF="wlan0"
 # LAN_IPV4="192.168.50.1/24" and LAN_IPV6="2a06:d1c1:ee:1::1"
 LAN_IPV4=$(ip -4 -br addr show "$LAN_IF" | awk '{print $3}')
-LAN_IPV4=$(ip -6 -br addr show "$LAN_IF" | awk '{print $3}')
+LAN_IPV6=$(ip -6 -br addr show "$LAN_IF" | awk '{print $3}')
 
 AP_NAME="fwAccessPoint"
 AP_PASSWORD="password"

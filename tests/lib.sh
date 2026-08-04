@@ -17,22 +17,36 @@ extract_time() {
 run_ping_mac() {
     local family=$1
     local target=$2
+    local count=$3
 
     if [[ "$family" == "v6" ]]; then
-        ping6 -c 1 "$target" 2>/dev/null # On Linux add -W 1: does not exist for ping6 :(
+        ping6 -c "$count" "$target" 2>/dev/null # On Linux add -W 1: does not exist for ping6 :(
     else
-        ping -c 1 -W 1000 "$target" 2>/dev/null # On linux -W 1
+        ping -c "$count" -W 1000 "$target" 2>/dev/null # On linux -W 1
     fi
 }
 
 run_ping_linux() {
     local family=$1
     local target=$2
+    local count=$3
 
     if [[ "$family" == "v6" ]]; then
-        "$V6_PING_CMD" -c 1 -W 1 "$target" 2>/dev/null
+        ping -6 -c "$count" -W 1 "$target" 2>/dev/null
     else
-        ping -c 1 -W 1 "$target" 2>/dev/null
+        ping -c "$count" -W 1 "$target" 2>/dev/null
+    fi
+}
+
+run_ping() {
+    local family=$1
+    local target=$2
+    local count=${3:-1}
+
+    if [[ "$OS" == "macos" ]]; then
+        run_ping_mac "$family" "$target" "$count"
+    else
+        run_ping_linux "$family" "$target" "$count"
     fi
 }
 
@@ -44,8 +58,16 @@ require_command() {
 }
 
 csv_write() {
-    printf '%s,%s\n' "$CURRENT_MODE,$*" >> "$OUTFILE"
+    if [[ $# -eq 1 ]]; then
+             printf '%s\n' "$CURRENT_MODE,$1" >> "$OUTFILE" # for all accuracy tests
+         else
+             local file="$1"
+             shift
+             printf '%s\n' "$CURRENT_MODE,$1" >> "$file"
+         fi
 }
+
+
 
 aggregate_results() {
     local summary="${OUTFILE%.csv}_summary.csv"

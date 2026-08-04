@@ -16,18 +16,22 @@ test_doq() {
 
     start=$(now_ms)
 
-    # kdig -6 +quic +verbose @2606:4700:4700::1111 facebook.com AAAA
-    # kdig -4 +quic +verbose @1.1.1.1 facebook.com A
+    # kdig -6 +quic @2606:4700:4700::1111 facebook.com AAAA
+    # kdig -4 +quic @1.1.1.1 facebook.com A
 
-    out=$(kdig $STACK +quic @${doq_endopoint} +short "$url" $RECORD 2>&1)
+    out=$(kdig $STACK +quic @$"${doq_endpoint}" +short "$url" $RECORD 2>&1)
     rc=$?
 
     end=$(now_ms)
     ms=$((end-start))
 
+#     echo "cmd=kdig $STACK +quic @"${doq_endpoint}" +short "$url" $RECORD"
+#     echo "out=$out"
+#     echo "rc=$rc"
+
     blocked=1
 
-    if [[ $rc -eq 0 ]] && grep -q 'status: NOERROR' <<< "$out"; then
+    if [[ $rc -eq 0 ]]; then
         blocked=0
     fi
 
@@ -35,6 +39,7 @@ test_doq() {
 }
 
 run_doq_block() {
+
     local doq_endpoints_v4=(
         # Cloudflare:
         "1.1.1.1"
@@ -65,11 +70,11 @@ run_doq_block() {
 
     for domain in "${BLOCKED_DOMAINS[@]}"; do
         for doq_endpoint_v4 in "${doq_endpoints_v4[@]}"; do
-            test_doq $doq_endpoint_v4 "domain" "v4"
+            test_doq $doq_endpoint_v4 $domain "v4"
         done
 
         for doq_endpoint_v6 in "${doq_endpoints_v6[@]}"; do
-            test_doq $doq_endpoint_v6 "domain" "v6"
+            test_doq $doq_endpoint_v6 $domain "v6"
         done
     done
 }

@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-# /usr/local/lib/fwPi/fwPiCLI
+# /usr/local/lib/fwPi/fwPiCLI/lib
 #
 # -----------------------------------------------------------
 # maps a mode to variables

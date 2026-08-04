@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# /usr/local/bin/fwPiCLI/config
+# /usr/local/lib/fwPi/fwPiCLI/config
 
 # -----------------------------------------------------------
 # configuration

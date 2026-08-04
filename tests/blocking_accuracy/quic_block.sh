@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 test_quic() {
-
     local url=$1
     local stack=$2
 
@@ -22,12 +21,11 @@ test_quic() {
 
     blocked=1
 
-    if [[ $rc -eq 0 ]] && grep -q "^HTTP/3"; then
+    if [[ $rc -eq 0 ]] && grep -q "^HTTP/3" <<< "$out"; then
         blocked=0
     fi
 
-    csv_write "quic_block,$stack,"-",$url,$ms,$blocked"
-
+    csv_write "quic_block,$stack,-,$url,$ms,$blocked"
 }
 
 run_quic_block() {

@@ -5,7 +5,6 @@ elements = {
   2a00:1450:4001:c15::5d,
   2a00:1450:4001:c15::5b,
   2a00:1450:4001:c15::88,
-  2a05:d018:76c:b684:b233:ac1f:be1f:7, # netflix.com
-  2a05:d018:76c:b685:c898:aa3a:42c7:9d21
+  2001:4bb8:13a:adb8:dfaf:4bce:f4a7:af0c # Iperf3 Client 2
 }
 

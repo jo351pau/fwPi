@@ -41,10 +41,10 @@ test_dns() {
 
     case "$stack" in
         v4)
-            [[ "$result" == "0.0.0.0" ]] && blocked=1
+            [[ "$out" == "0.0.0.0" ]] && blocked=1
             ;;
         v6)
-            [[ "$result" == "::" ]] && blocked=1
+            [[ "$out" == "::" ]] && blocked=1
             ;;
     esac
 
@@ -58,7 +58,7 @@ test_dns() {
 # ------------------------------------------------------------
 
 run_dns_interception() {
-    local server="$PIHOLE_DNS"
+    local server="$GATEWAY_V4"
 
     for domain in "${BLOCKED_DOMAINS[@]}"; do
         test_dns "dns_interception" "$server" "$domain" v4
