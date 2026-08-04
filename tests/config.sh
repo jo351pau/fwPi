@@ -25,7 +25,7 @@ GATEWAY_V6="2a06:d1c1:ee:1::1" # PIHOLE_DNS_V6
 PI_HOST="jp@$GATEWAY_V4"
 IPERF_PORT=5201
 PING_COUNT=30
-IPERF_SERVER_V4="172.20.10.2" # Client 2
+IPERF_SERVER_V4="89.144.212.166" # Client 2
 IPERF_SERVER_V6="2001:4bb8:13a:adb8:dfaf:4bce:f4a7:af0c" # Client 2
 
 BASE_DIR="/Users/johannapauler/Desktop/fwPi/config"

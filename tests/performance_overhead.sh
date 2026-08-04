@@ -60,12 +60,15 @@ run_iperf() {
     local run_num="$1" stack="$2"
     local json
 
-    # iperf3 -c 192.168.50.115 -p 5201 -t 30
+    # iperf3 -c 172.20.10.2 -p 5201 -t 30
     json=$(iperf3 -c "$IPERF_SERVER" -p "$IPERF_PORT" -t "$DURATION" -J)
     status=$?
 
     if [ $status -ne 0 ]; then
         echo "iperf3 failed:"
+        echo "iperf3 -c "$IPERF_SERVER" -p "$IPERF_PORT" -t "$DURATION" -J"
+        echo "status=$status"
+        echo "json=$json"
         return 1
     fi
 

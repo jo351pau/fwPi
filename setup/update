@@ -10,7 +10,7 @@
 # - Reloads the current firewall mode
 #
 # Run:
-#   sudo ./setup/update.sh
+#   sudo ./setup/update
 #
 
 set -euo pipefail

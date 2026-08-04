@@ -7,5 +7,5 @@ elements = {
     142.251.14.136,
     2.16.16.166, # tiktok.com
     2.16.16.174,
-    172.20.10.2 # IPERF3 Client 2
+    89.144.212.166 # IPERF3 Client 2 public ip
 }
