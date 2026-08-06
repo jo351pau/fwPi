@@ -1,2 +1,1 @@
-# Getting started with nftables
-`
+ummm this is all in config/nftables/nftables.conf

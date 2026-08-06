@@ -6,6 +6,13 @@
 # (ping) concurrently so all three numbers describe the same load window.
 # Called once per mode by run.sh, which handles mode-switching and prompting.
 #
+# Iperf server needs to run on a second client NOT connected to fwAccessPoint
+# Global IPv4/IPv6 adresses of second client must be set in the config -> IPERF_SERVER_V4/IPERF_SERVER_V6
+# I tried with a Hotspot, but they did not let me send ICMP packets :(
+# Will try again, with an adapter for ethernet cable.
+#
+#
+#
 # Remote prerequisite: sudo apt install sysstat
 # Local prerequisite:  ssh-add ~/.ssh/id_ed25519   (key must be loaded in the
 #                       agent, since sampling runs in the background with no

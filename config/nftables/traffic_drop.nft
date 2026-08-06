@@ -12,13 +12,13 @@ table inet filter {
         ip6 daddr @deny_ipv6 counter log prefix "DROP deny_ipv6 out: " drop
         ip6 saddr @deny_ipv6 counter log prefix "DROP deny_ipv6 in: " drop
 
-        # DNS resolver IP blocklist: Catches DoH and DoT (already covered elsewhere)
+        # DNS resolver IP blocklist: Catches some DoH and DoT (already covered elsewhere)
         ip  daddr @deny_ipv4_dns counter log prefix "DROP dns_ipv4 out: " drop
         ip  saddr @deny_ipv4_dns counter log prefix "DROP dns_ipv4 in: " drop
         ip6 daddr @deny_ipv6_dns counter log prefix "DROP dns_ipv6 out: " drop
         ip6 saddr @deny_ipv6_dns counter log prefix "DROP dns_ipv6 in: " drop
 
-        # DoT
+        # DoT and DoQ
         tcp dport 853 counter log prefix "DROP DoT TCP: " drop
         udp dport 853 counter log prefix "DROP DoT UDP: " drop
 
